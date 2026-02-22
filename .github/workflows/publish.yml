@@ -7,10 +7,11 @@ on:
         description: "Version bump (major, minor, patch)"
         required: false
         default: "patch"
-      version:
-        description: "Explicit version (overrides bump)"
-        required: false
-        default: ""
+        type: choice
+        options:
+          - 'major'
+          - 'minor'
+          - 'patch'
 jobs:
   prepare:
     name: Prepare version
@@ -28,10 +29,9 @@ jobs:
       - name: Bump version in package.json and Cargo.toml
         id: bump
         env:
-          INPUT_VERSION: ${{ github.event.inputs.version }}
           INPUT_BUMP: ${{ github.event.inputs.bump }}
         run: |
-          bun -e "const fs=require('fs'); const pkg=JSON.parse(fs.readFileSync('package.json')); const inputVer=process.env.INPUT_VERSION; const bump=process.env.INPUT_BUMP||'patch'; function inc(v,part){const p=v.split('.').map(n=>parseInt(n)); if(part==='major'){p[0]++;p[1]=0;p[2]=0;}else if(part==='minor'){p[1]++;p[2]=0;}else{p[2]++;}return p.join('.');} const newver = inputVer || inc(pkg.version,bump); pkg.version=newver; fs.writeFileSync('package.json',JSON.stringify(pkg,null,2)+"\n"); let cargo = fs.readFileSync('src-tauri/Cargo.toml','utf8'); cargo = cargo.replace(/version\s*=\s*\"[^\"]+\"/,`version = \"${newver}\"`); fs.writeFileSync('src-tauri/Cargo.toml',cargo); console.log(newver);
+          bun -e "const fs=require('fs'); const pkg=JSON.parse(fs.readFileSync('package.json')); const bump=process.env.INPUT_BUMP||'patch'; function inc(v,part){const p=v.split('.').map(n=>parseInt(n)); if(part==='major'){p[0]++;p[1]=0;p[2]=0;}else if(part==='minor'){p[1]++;p[2]=0;}else{p[2]++;}return p.join('.');} const newver = inc(pkg.version,bump); pkg.version=newver; fs.writeFileSync('package.json',JSON.stringify(pkg,null,2)+"\n"); let cargo = fs.readFileSync('src-tauri/Cargo.toml','utf8'); cargo = cargo.replace(/version\s*=\s*\"[^\"]+\"/,`version = \"${newver}\"`); fs.writeFileSync('src-tauri/Cargo.toml',cargo); console.log(newver);
           echo "new_version=$(bun -e \"console.log(require('./package.json').version)\")" >> $GITHUB_OUTPUT
 
       - name: Commit version bump
