@@ -17,5 +17,8 @@ indent_size = 4
 [Makefile]
 indent_style = tab
 
+[.tauri/*]
+insert_final_newline = false
+
 [*.md]
 trim_trailing_whitespace = false

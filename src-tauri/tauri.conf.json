@@ -35,7 +35,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRFQkNGMDM3RTVDRUNDQTYKUldTbXpNN2xOL0M4VGhLQW9kWEFqM3dXblZqL0hOYUFIMFhMRUNIdjJ2QlA5ZElBRS92a2VyMDIK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDkyMjc0RTFCQzExNkZFQ0QKUldUTi9oYkJHMDRua2pHbWRBbXVHTjZTVWZkcFVsYWI0S1M3WXZFUjNTcUlodFZaV3o0MGFQMXIK",
       "endpoints": [
         "https://github.com/miratopia/launcher/releases/latest/download/latest.json"
       ],
