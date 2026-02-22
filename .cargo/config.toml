@@ -1,0 +1,6 @@
+[target.x86_64-pc-windows-gnu]
+linker = "x86_64-w64-mingw32-gcc"
+ar = "x86_64-w64-mingw32-ar"
+
+# Note: Assurez-vous que C:\msys64\mingw64\bin est dans votre PATH système
+# ou utilisez le script cargo-mingw.ps1 pour compiler
