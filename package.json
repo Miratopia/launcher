@@ -10,7 +10,10 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "tauri": "tauri",
-    "tauri:signer:generate": "bunx tauri signer generate --force -w .tauri/miratopia-launcher.key"
+    "tauri:signer:generate": "bunx tauri signer generate --force -w .tauri/miratopia-launcher.key",
+    "install-sccache": "bunx cargo install sccache --locked || true",
+    "tauri:build-fast": "cross-env RUSTC_WRAPPER=sccache bunx tauri build",
+    "tauri:dev-fast": "cross-env RUSTC_WRAPPER=sccache bunx tauri dev"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.0",
@@ -25,6 +28,7 @@
     "@tauri-apps/cli": "^2.10.0",
     "nuxt": "^4.2.2",
     "typescript": "~5.6.2",
-    "vite-plugin-pug": "^0.4.1"
+    "vite-plugin-pug": "^0.4.1",
+    "cross-env": "^7.0.3"
   }
 }

@@ -2,14 +2,51 @@ name: publish
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
+    inputs:
+      bump:
+        description: "Version bump (major, minor, patch)"
+        required: false
+        default: "patch"
+      version:
+        description: "Explicit version (overrides bump)"
+        required: false
+        default: ""
 jobs:
+  prepare:
+    name: Prepare version
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.bump.outputs.new_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Bump version in package.json and Cargo.toml
+        id: bump
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          INPUT_BUMP: ${{ github.event.inputs.bump }}
+        run: |
+          bun -e "const fs=require('fs'); const pkg=JSON.parse(fs.readFileSync('package.json')); const inputVer=process.env.INPUT_VERSION; const bump=process.env.INPUT_BUMP||'patch'; function inc(v,part){const p=v.split('.').map(n=>parseInt(n)); if(part==='major'){p[0]++;p[1]=0;p[2]=0;}else if(part==='minor'){p[1]++;p[2]=0;}else{p[2]++;}return p.join('.');} const newver = inputVer || inc(pkg.version,bump); pkg.version=newver; fs.writeFileSync('package.json',JSON.stringify(pkg,null,2)+"\n"); let cargo = fs.readFileSync('src-tauri/Cargo.toml','utf8'); cargo = cargo.replace(/version\s*=\s*\"[^\"]+\"/,`version = \"${newver}\"`); fs.writeFileSync('src-tauri/Cargo.toml',cargo); console.log(newver);
+          echo "new_version=$(bun -e \"console.log(require('./package.json').version)\")" >> $GITHUB_OUTPUT
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json src-tauri/Cargo.toml
+          git commit -m "chore(release): bump version to ${{ steps.bump.outputs.new_version }}" || echo "No changes to commit"
+          git push
+
   publish-tauri:
     permissions:
       contents: write
 
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
@@ -51,20 +88,14 @@ jobs:
 
       - name: install frontend dependencies
         run: bun install
-
-      # Si ton front a besoin d'un build séparé, ajoute-le ici (sinon beforeBuildCommand côté tauri)
-      # - run: npm run build
-
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-          # clés de signature updater (OBLIGATOIRE si createUpdaterArtifacts=true)
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: app-v__VERSION__
-          releaseName: "App v__VERSION__"
+          tagName: app-v${{ needs.prepare.outputs.new_version }}
+          releaseName: "App v${{ needs.prepare.outputs.new_version }}"
           releaseBody: "See the assets to download this version and install."
           releaseDraft: false
           prerelease: false
