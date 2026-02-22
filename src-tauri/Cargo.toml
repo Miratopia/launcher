@@ -1,6 +1,6 @@
 [package]
 name = "minecraft_launcher"
-version = "0.1.1"
+version = "0.1.2"
 description = "Minecraft launcher built with Rust and Tauri"
 authors = ["Tacx <12997062+tacxou@users.noreply.github.com>"]
 edition = "2021"
