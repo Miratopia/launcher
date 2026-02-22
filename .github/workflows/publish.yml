@@ -51,8 +51,13 @@ jobs:
         with:
           workspaces: ./src-tauri -> target
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: install frontend dependencies
-        run: npm ci
+        run: bun install
 
       # Si ton front a besoin d'un build séparé, ajoute-le ici (sinon beforeBuildCommand côté tauri)
       # - run: npm run build
