@@ -22,6 +22,16 @@ jobs:
       new_version: ${{ steps.bump.outputs.new_version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+      - name: Show bumped versions
+        run: |
+          echo 'package.json version:'
+          bun -e "console.log(JSON.parse(require('fs').readFileSync('package.json','utf8')).version)"
+          echo 'Cargo.toml version:'
+          grep '^version' src-tauri/Cargo.toml || true
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
