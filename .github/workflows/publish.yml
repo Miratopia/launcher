@@ -78,6 +78,12 @@ jobs:
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
+      - name: Install and start sccache
+        run: |
+          cargo install sccache --locked || true
+          sccache --start-server || true
+        shell: bash
+
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
