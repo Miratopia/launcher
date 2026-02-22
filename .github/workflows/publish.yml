@@ -9,9 +9,9 @@ on:
         default: "patch"
         type: choice
         options:
-          - 'major'
-          - 'minor'
-          - 'patch'
+          - "major"
+          - "minor"
+          - "patch"
 jobs:
   prepare:
     name: Prepare version
