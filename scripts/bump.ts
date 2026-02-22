@@ -3,6 +3,7 @@ import path from 'path'
 
 const pkgPath = path.resolve(process.cwd(), 'package.json')
 const cargoPath = path.resolve(process.cwd(), 'src-tauri', 'Cargo.toml')
+const tauriConfigPath = path.resolve(process.cwd(), 'src-tauri', 'tauri.conf.json')
 
 type Pkg = {
   [key: string]: any
@@ -27,5 +28,9 @@ fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8')
 let cargo = fs.readFileSync(cargoPath, 'utf8')
 cargo = cargo.replace(/version\s*=\s*"[^"]+"/, `version = "${newver}"`)
 fs.writeFileSync(cargoPath, cargo, 'utf8')
+
+const tauriConfig = JSON.parse(fs.readFileSync(tauriConfigPath, 'utf8')) as Pkg
+tauriConfig.version = newver
+fs.writeFileSync(tauriConfigPath, JSON.stringify(tauriConfig, null, 2) + '\n', 'utf8')
 
 console.log(newver)
