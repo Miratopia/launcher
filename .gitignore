@@ -13,6 +13,8 @@ dist-ssr
 *.local
 .nuxt/
 .output/
+src-tauri/errors_full.txt
+src-tauri/errors.txt
 
 # Editor directories and files
 .vscode/*
