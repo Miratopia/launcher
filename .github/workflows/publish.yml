@@ -16,6 +16,8 @@ jobs:
   prepare:
     name: Prepare version
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       new_version: ${{ steps.bump.outputs.new_version }}
     steps:
