@@ -1,5 +1,5 @@
 [build]
-rustc-wrapper = "sccache"
+rustc-wrapper = "sccache"  # Commenté - installez sccache avec 'bun run install-sccache' si nécessaire
 # Optional: set a shared target dir to reuse artifacts
 # target-dir = "target"
 
