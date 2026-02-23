@@ -14,9 +14,24 @@ import { check } from "@tauri-apps/plugin-updater";
 
 let data = ref<any>();
 async function testUpdater() {
-  const res = await check();
-  data.value = res;
-  console.log(res);
+  if (!import.meta.env.PROD) {
+    data.value = { skipped: true, reason: "dev-mode" };
+    return;
+  }
+
+  try {
+    const res = await check();
+    data.value = res ?? { update: false };
+    console.log(res);
+
+    if (res?.available) {
+      await res.downloadAndInstall();
+      data.value = { update: true, installed: true };
+    }
+  } catch (error) {
+    data.value = { error: String(error) };
+    console.error(error);
+  }
 }
 testUpdater();
 </script>

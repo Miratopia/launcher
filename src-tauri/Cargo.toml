@@ -15,8 +15,9 @@ name = "launcher_test_rust_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [features]
-default = []
+default = ["console"]
 events = ["lighty-launcher/events"]
+console = []
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -29,13 +30,14 @@ serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+tracing-appender = "0.2"
 reqwest = { version = "0.11", features = ["json"] }
 # path = "../../LightyLauncherLib"
 lighty-launcher = { git = "https://github.com/tacxou/LightyLauncherLib.git", branch = "pr-fix-neoforge-loader", features = [
-    "tracing",
-    "neoforge",
-    "fabric",
-    "events",
+  "tracing",
+  "neoforge",
+  "fabric",
+  "events",
 ] }
 tauri-plugin-stronghold = "2"
 iota_stronghold = "2"

@@ -6,12 +6,39 @@ use lighty_launcher::{
     event::{Event, EventBus, EventTryReceiveError},
 };
 use tauri::{Emitter, Manager};
+use tracing_subscriber::prelude::*;
+
+fn init_tracing() -> tracing_appender::non_blocking::WorkerGuard {
+    let log_dir = std::env::temp_dir().join("miratopia-launcher");
+    let _ = std::fs::create_dir_all(&log_dir);
+    let log_path = log_dir.join("launcher.log");
+    let log_file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)
+        .expect("failed to open log file");
+
+    let (non_blocking, guard) = tracing_appender::non_blocking(log_file);
+
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(std::io::stdout)
+                .with_ansi(true),
+        )
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(non_blocking)
+                .with_ansi(false),
+        )
+        .init();
+
+    guard
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
-        .init();
+    let _tracing_guard = init_tracing();
 
     const QUALIFIER: &str = "fr";
     const ORGANIZATION: &str = ".miratopia";
