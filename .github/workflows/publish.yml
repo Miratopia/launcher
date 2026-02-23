@@ -76,6 +76,9 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
 
+    env:
+      RUSTC_WRAPPER: sccache
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -96,29 +99,58 @@ jobs:
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: Install and start sccache
-        run: |
-          cargo install sccache --locked || true
-          sccache --start-server || true
+      - name: Install sccache
+        uses: taiki-e/install-action@v2
+        with:
+          tool: sccache
+
+      - name: Set sccache env
+        run: echo "SCCACHE_DIR=$RUNNER_TEMP/sccache" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Cache sccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: sccache-${{ matrix.platform }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            sccache-${{ matrix.platform }}-
+
+      - name: Start sccache
+        run: sccache --start-server
         shell: bash
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
           workspaces: ./src-tauri -> target
+          shared-key: tauri-${{ matrix.platform }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
+      - name: Cache Bun
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ matrix.platform }}-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            bun-${{ matrix.platform }}-
+
       - name: install frontend dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
+
+      - name: Build frontend
+        run: bun run generate
+
       - uses: tauri-apps/tauri-action@v0.6.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          TAURI_SKIP_BUILD: true
         with:
           tagName: app-v${{ needs.prepare.outputs.new_version }}
           releaseName: "App v${{ needs.prepare.outputs.new_version }}"
