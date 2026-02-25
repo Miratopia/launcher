@@ -12,12 +12,22 @@
       </li>
     </ul>
     <progress :value="progress" max="100"></progress>
+    <br />
+    logs:
+    <ul>
+      <li v-for="log in logs" :key="log.timestamp">{{ log.line }}</li>
+    </ul>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { onBeforeUnmount, onMounted, ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { useConsoleStore } from "../stores/consoleStore";
+
+const consoleStore = useConsoleStore();
+
+import { computed } from "vue";
+const logs = computed(() => consoleStore.getAllLogs);
 
 async function launchGame() {
   try {
@@ -46,80 +56,6 @@ async function launchGame() {
     console.error("❌ Launch failed:", error);
   }
 }
-
-import { listen } from "@tauri-apps/api/event";
-
-let unlisten: null | (() => void) = null;
-let javaDownloadStartedUnlisten: null | (() => void) = null;
-let javaDownloadProgressUnlisten: null | (() => void) = null;
-let javaDownloadCompletedUnlisten: null | (() => void) = null;
-let launcherDownloadStartedUnlisten: null | (() => void) = null;
-let launcherDownloadProgressUnlisten: null | (() => void) = null;
-let launcherDownloadCompletedUnlisten: null | (() => void) = null;
-
-const progress = ref(0);
-const maxProgress = ref(100);
-
-onMounted(async () => {
-  unlisten = await listen("launcher:console", (e) => {
-    console.log("[launcher]", e.payload);
-  });
-  javaDownloadStartedUnlisten = await listen<any>("launcher:java-download-started", (e) => {
-    console.log("[launcher] Java download started:", e.payload);
-    maxProgress.value = e.payload.total_bytes; // Assuming the payload contains the total size
-  });
-  javaDownloadProgressUnlisten = await listen<any>("launcher:java-download-progress", (e) => {
-    progress.value = (e.payload.bytes * 100) / maxProgress.value; // Update progress based on bytes downloaded
-    console.log(`Download progress: ${progress.value}/${maxProgress.value}`);
-  });
-  javaDownloadCompletedUnlisten = await listen<any>("launcher:java-download-completed", (e) => {
-    progress.value = 100; // Set progress to max when completed
-    console.log("Java download completed");
-  });
-  launcherDownloadStartedUnlisten = await listen<any>("launcher:launcher-download-started", (e) => {
-    console.log("[launcher] Launcher download started:", e.payload);
-    maxProgress.value = e.payload.total_bytes; // Assuming the payload contains the total size
-  });
-  launcherDownloadProgressUnlisten = await listen<any>("launcher:launcher-download-progress", (e) => {
-    progress.value = (e.payload.bytes * 100) / maxProgress.value; // Update progress based on bytes downloaded
-    console.log(`Download progress: ${progress.value}/${maxProgress.value}`);
-  });
-  launcherDownloadCompletedUnlisten = await listen<any>("launcher:launcher-download-completed", (e) => {
-    progress.value = 100; // Set progress to max when completed
-    console.log("Launcher download completed");
-  });
-});
-
-onBeforeUnmount(async () => {
-  if (unlisten) {
-    await unlisten();
-    unlisten = null;
-  }
-  if (javaDownloadStartedUnlisten) {
-    await javaDownloadStartedUnlisten();
-    javaDownloadStartedUnlisten = null;
-  }
-  if (javaDownloadProgressUnlisten) {
-    await javaDownloadProgressUnlisten();
-    javaDownloadProgressUnlisten = null;
-  }
-  if (javaDownloadCompletedUnlisten) {
-    await javaDownloadCompletedUnlisten();
-    javaDownloadCompletedUnlisten = null;
-  }
-  if (launcherDownloadStartedUnlisten) {
-    await launcherDownloadStartedUnlisten();
-    launcherDownloadStartedUnlisten = null;
-  }
-  if (launcherDownloadProgressUnlisten) {
-    await launcherDownloadProgressUnlisten();
-    launcherDownloadProgressUnlisten = null;
-  }
-  if (launcherDownloadCompletedUnlisten) {
-    await launcherDownloadCompletedUnlisten();
-    launcherDownloadCompletedUnlisten = null;
-  }
-});
 
 const listAccount = await invoke("list_accounts");
 console.log("Accounts:", listAccount);
