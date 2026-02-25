@@ -1,8 +1,14 @@
+use crate::commands::accounts::{get_account, VaultState};
+use lighty_launcher::prelude::InstanceControl;
+use lighty_launcher::Loader;
 use lighty_launcher::{loaders::Mods, prelude::*};
+use once_cell::sync::Lazy;
 use serde::Deserialize;
+use std::sync::Mutex;
 use tauri::State;
 
-use crate::commands::accounts::{get_account, VaultState};
+static MC_INSTANCE: Lazy<Mutex<Option<VersionBuilder<'static, Loader>>>> =
+    Lazy::new(|| Mutex::new(None));
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone)]
@@ -171,16 +177,24 @@ pub async fn launch_game(
             });
         }
     }
+
     instance = instance.with_mods(mods);
+
+    // Stocke l'instance dans la variable globale
+    {
+        let mut guard = MC_INSTANCE.lock().unwrap();
+        *guard = Some(instance.clone());
+    }
 
     instance
         .launch(&profile, java_dist)
         .with_event_bus(&event_bus.inner().clone())
-        // .with_arguments({
-        //     let mut args = HashMap::new();
-        //     args.insert("demo".to_string(), "true".to_string());
-        //     args
-        // })
+        // .with_arguments()
+        // .game_arg("--username", &profile.name)
+        .with_jvm_options()
+        .set("Xmx", "6G")
+        .set("Xms", "2G")
+        .done()
         .run()
         .await
         .map_err(|e| {
@@ -191,4 +205,33 @@ pub async fn launch_game(
 
     let _ = instance_exit_rx.await;
     Ok(format!("Game {} launched successfully", modpack_name))
+}
+
+#[tauri::command]
+pub async fn stop_launch(
+    _event_bus: State<'_, EventBus>,
+    _instance_id: String,
+) -> Result<String, String> {
+    // On extrait l'instance pour ne pas garder le lock pendant l'await
+    let instance_opt = {
+        let mut guard = MC_INSTANCE.lock().unwrap();
+        guard.take()
+    };
+    if let Some(instance) = instance_opt {
+        if let Some(pid) = instance.get_pid() {
+            println!("Running with PID: {}", pid);
+            instance
+                .close_instance(pid)
+                .await
+                .map_err(|e| format!("Erreur fermeture: {:?}", e))?;
+        }
+        Ok("Instance arrêtée".to_string())
+    } else {
+        Err("Instance non trouvée".to_string())
+    }
+}
+
+pub fn get_instance(_instance_id: String) -> Result<bool, String> {
+    let guard = MC_INSTANCE.lock().unwrap();
+    Ok(guard.is_some())
 }

@@ -4,6 +4,7 @@
     windows_subsystem = "windows"
 )]
 
-fn main() {
+#[tokio::main]
+async fn main() {
     launcher_test_rust_lib::run()
 }
