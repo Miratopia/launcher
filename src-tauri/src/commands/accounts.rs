@@ -273,6 +273,46 @@ pub async fn add_account(
 }
 
 #[tauri::command]
+pub fn del_account(state: State<'_, VaultState>, profile_name: &str) -> Result<(), String> {
+    with_sh(&state, |sh| {
+        let client_path = format!("minecraft/{}", profile_name);
+        if let Ok(client) = sh.get_client(client_path.as_bytes()) {
+            let store = client.store();
+            let _ = store.delete(b"username");
+            let _ = store.delete(b"uuid");
+            let _ = store.delete(b"access_token");
+        }
+
+        // Mettre à jour la liste des comptes dans le metadata
+        let metadata_client = sh
+            .get_client(b"metadata/accounts")
+            .or_else(|_| sh.create_client(b"metadata/accounts"))
+            .map_err(|e| e.to_string())?;
+        let metadata_store = metadata_client.store();
+        let mut accounts: Vec<String> =
+            match metadata_store.get(b"accounts").map_err(|e| e.to_string())? {
+                Some(bytes) => serde_json::from_slice(&bytes).unwrap_or_default(),
+                None => Vec::new(),
+            };
+        accounts.retain(|acc| acc != profile_name);
+        metadata_store
+            .insert(
+                b"accounts".to_vec(),
+                serde_json::to_vec(&accounts).map_err(|e| e.to_string())?,
+                None,
+            )
+            .map_err(|e| e.to_string())?;
+
+        // Commit uniquement le metadata/accounts (ne pas écrire le client supprimé)
+        sh.write_client(b"metadata/accounts")
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    })?;
+    commit_snapshot(&state)?;
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn list_accounts(state: State<'_, VaultState>) -> Result<Vec<String>, String> {
     let guard = state.inner.lock().unwrap();
     let sh = match guard.as_ref() {
