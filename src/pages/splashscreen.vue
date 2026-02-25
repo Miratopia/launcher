@@ -24,7 +24,7 @@ async function testUpdater() {
     data.value = res ?? { update: false };
     console.log(res);
 
-    if (res?.available) {
+    if (res) {
       await res.downloadAndInstall();
       data.value = { update: true, installed: true };
     }
