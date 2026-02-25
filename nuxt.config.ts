@@ -6,6 +6,16 @@ export default defineNuxtConfig({
   pages: true,
   components: true,
   srcDir: 'src/',
+
+  modules: [
+    '@nuxtjs/tailwindcss',
+    '@pinia/nuxt',
+  ],
+
+  css: [
+    '~/assets/css/tailwind.css',
+  ],
+
   vite: {
     clearScreen: false,
     // https://v2.tauri.app/reference/environment-variables/
@@ -13,7 +23,7 @@ export default defineNuxtConfig({
     server: {
       strictPort: true,
       host: '0.0.0.0',
-      hmr: {  
+      hmr: {
         protocol: 'ws',
         host: '0.0.0.0',
         port: 5183,

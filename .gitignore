@@ -26,3 +26,5 @@ src-tauri/errors.txt
 *.njsproj
 *.sln
 *.sw?
+
+*.old
