@@ -21,8 +21,8 @@ import { invoke } from "@tauri-apps/api/core";
 
 async function launchGame() {
   try {
-    const name = prompt("Game name:", "mirabuild");
-    if (!name) {
+    const modpackName = prompt("Game name:", "mirabuild");
+    if (!modpackName) {
       alert("Game name is required.");
       return;
     }
@@ -37,7 +37,7 @@ async function launchGame() {
     }
 
     const result = await invoke("launch_game", {
-      name,
+      modpackName,
       profileName,
       javaDistribution,
     });

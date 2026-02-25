@@ -58,7 +58,7 @@ struct ModpackInfo {
 pub async fn launch_game(
     state: State<'_, VaultState>,
     event_bus: State<'_, EventBus>,
-    name: String,
+    modpack_name: String,
     profile_name: String,
     java_distribution: String,
 ) -> Result<String, String> {
@@ -108,7 +108,7 @@ pub async fn launch_game(
 
     let modpack_url = format!(
         "https://raw.githubusercontent.com/tacxtv/miratopia-launcher/refs/heads/config/modpacks/{}/modpack.json",
-        name
+        modpack_name,
     );
     let modpack = reqwest::get(&modpack_url)
         .await
@@ -176,6 +176,11 @@ pub async fn launch_game(
     instance
         .launch(&profile, java_dist)
         .with_event_bus(&event_bus.inner().clone())
+        // .with_arguments({
+        //     let mut args = HashMap::new();
+        //     args.insert("demo".to_string(), "true".to_string());
+        //     args
+        // })
         .run()
         .await
         .map_err(|e| {
@@ -185,5 +190,5 @@ pub async fn launch_game(
         })?;
 
     let _ = instance_exit_rx.await;
-    Ok(format!("Game {} launched successfully", name))
+    Ok(format!("Game {} launched successfully", modpack_name))
 }
