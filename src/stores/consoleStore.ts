@@ -1,35 +1,42 @@
 import { defineStore } from 'pinia'
+import { ConsoleLinePayload } from '../types/lighty-events'
 
 export const useConsoleStore = defineStore('console', {
   state: () => ({
-    logs: new Map<number, { pid: number; stream: 'stdout' | 'stderr'; line: string; timestamp: number }[]>(),
+    logs: new Map<number, ConsoleLinePayload[]>(),
   }),
 
   getters: {
     getLogsByPid: (state) => {
-      return (pid: number) => state.logs.get(pid) || [];
+      return (pid: number): ConsoleLinePayload[] => state.logs.get(pid) || []
     },
+
     getAllLogs: (state) => {
-      const allLogs: { pid: number; stream: 'stdout' | 'stderr'; line: string; timestamp: number }[] = [];
+      const allLogs: ConsoleLinePayload[] = []
+
       state.logs.forEach((logs) => {
-        allLogs.push(...logs);
-      });
-      return allLogs;
+        allLogs.push(...logs)
+      })
+
+      return allLogs
     },
   },
 
   actions: {
-    addLog(pid: number, log: { pid: number; stream: 'stdout' | 'stderr'; line: string; timestamp: number }) {
+    addLog(pid: number, log: ConsoleLinePayload): void {
       if (!this.logs.has(pid)) {
-        this.logs.set(pid, []);
+        this.logs.set(pid, [])
       }
-      this.logs.get(pid)!.push(log);
+
+      this.logs.get(pid)!.push(log)
     },
-    clearLogs(pid: number) {
-      this.logs.delete(pid);
+
+    clearLogs(pid: number): void {
+      this.logs.delete(pid)
     },
-    clearAllLogs() {
-      this.logs.clear();
+
+    clearAllLogs(): void {
+      this.logs.clear()
     },
   },
 })

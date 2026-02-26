@@ -13,7 +13,8 @@
     "tauri:signer:generate": "bunx tauri signer generate --force -w .tauri/miratopia-launcher.key",
     "install-sccache": "bunx cargo install sccache --locked || true",
     "tauri:build-fast": "cross-env RUSTC_WRAPPER=sccache bunx tauri build",
-    "tauri:dev-fast": "cross-env RUSTC_WRAPPER=sccache bunx tauri dev"
+    "tauri:dev-fast": "cross-env RUSTC_WRAPPER=sccache bunx tauri dev",
+    "tauri:build:win": "$private = Get-Content -Raw '.\\.tauri\\miratopia-launcher.key'; $env:TAURI_SIGNING_PRIVATE_KEY = $private; bun run tauri build"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.0",

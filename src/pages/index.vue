@@ -11,6 +11,7 @@
         <button @click="removeAccount(account)">Remove Account</button>
       </li>
     </ul>
+    <pre>{{ progress }}%</pre>
     <progress :value="progress" max="100"></progress>
     <br />
     logs:
@@ -23,8 +24,12 @@
 <script lang="ts" setup>
 import { invoke } from "@tauri-apps/api/core";
 import { useConsoleStore } from "../stores/consoleStore";
+import { useDownloadStore } from "../stores/downloadStore";
 
 const consoleStore = useConsoleStore();
+const downloadStore = useDownloadStore();
+
+const progress = computed(() => downloadStore.getStatusByInstance("mirabuild")?.percentage || 0);
 
 import { computed } from "vue";
 const logs = computed(() => consoleStore.getAllLogs);

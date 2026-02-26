@@ -1,50 +1,15 @@
 mod commands;
 mod events;
+mod runners;
 mod types;
 
 use commands::accounts::{init_vault_if_needed, VaultState};
 use lighty_launcher::{core::AppState, event::EventBus};
-use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
 use tauri::Manager;
-use tauri::{
-    menu::{Menu, MenuItem},
-    tray::TrayIconBuilder,
-};
-use tracing_subscriber::prelude::*;
-
-fn init_tracing() -> tracing_appender::non_blocking::WorkerGuard {
-    let log_dir = std::env::temp_dir().join("miratopia-launcher");
-    let _ = std::fs::create_dir_all(&log_dir);
-    let log_path = log_dir.join("launcher.log");
-    let log_file = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_path)
-        .expect("failed to open log file");
-
-    let (non_blocking, guard) = tracing_appender::non_blocking(log_file);
-
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::fmt::layer()
-                .with_writer(std::io::stdout)
-                .with_ansi(true),
-        )
-        .with(
-            tracing_subscriber::fmt::layer()
-                .with_writer(non_blocking)
-                .with_ansi(false),
-        )
-        .init();
-
-    guard
-}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    println!("=== MIRATOPIA LAUNCHER: run() démarre ===");
-    let _tracing_guard = init_tracing();
-    println!("Tracing OK");
+    tracing::info!("🏁 Démarrage du launcher");
 
     const QUALIFIER: &str = "fr";
     const ORGANIZATION: &str = ".miratopia";
@@ -86,43 +51,10 @@ pub fn run() {
             tracing::error!(%err, "vault init failed");
         }
 
-        let quit_i = MenuItem::with_id(app, "quit", "Quitter", true, None::<&str>)?;
-        let console_i = MenuItem::with_id(app, "console", "Console", true, None::<&str>)?;
-        let menu = Menu::with_items(app, &[&console_i, &quit_i])?;
-
-        TrayIconBuilder::new()
-            .icon(app.default_window_icon().unwrap().clone())
-            .on_tray_icon_event(|tray, event| match event {
-                TrayIconEvent::Click {
-                    button: MouseButton::Left,
-                    button_state: MouseButtonState::Up,
-                    ..
-                } => {
-                    let app = tray.app_handle();
-
-                    if let Some(window) = app.get_webview_window("main") {
-                        let _ = window.unminimize();
-                        let _ = window.show();
-                        let _ = window.set_focus();
-                    }
-                }
-                _ => {}
-            })
-            .menu(&menu)
-            .show_menu_on_left_click(true)
-            .on_menu_event(|app, event| match event.id.as_ref() {
-                "quit" => {
-                    println!("quit menu item was clicked");
-                    app.exit(0);
-                }
-                _ => {
-                    println!("menu item {:?} not handled", event.id);
-                }
-            })
-            .build(app)?;
-
         Ok(())
     });
+
+    builder = runners::setup(builder);
     println!("Setup OK");
 
     #[cfg(desktop)]

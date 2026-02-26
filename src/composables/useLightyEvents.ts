@@ -1,59 +1,54 @@
 import { onMounted, onUnmounted } from 'vue'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { useConsoleStore } from '../stores/consoleStore'
+import { useDownloadStore } from '../stores/downloadStore'
+import { useLaunchStore } from '../stores/launchStore'
+import { useErrorStore } from '../stores/errorStore'
+import { ConsoleLinePayload, DownloadProgressPayload, ErrorPayload, LaunchStatus, LaunchStatusPayload, LightyEvent } from '../types/lighty-events'
+import consola from 'consola'
 
 export function useLightyEvents() {
-  // const downloadStore = useDownloadStore();
-  // const launchStore = useLaunchStore();
+  const downloadStore = useDownloadStore()
+  const launchStore = useLaunchStore()
   const consoleStore = useConsoleStore()
-  // const errorStore = useErrorStore();
+  const errorStore = useErrorStore()
+
   let unlistenFns: UnlistenFn[] = []
 
   async function setupListeners() {
     try {
-      const unlistenDownload = await listen<any>(
-        'lighty://download-progress',
+      const unlistenDownload = await listen<DownloadProgressPayload>(
+        LightyEvent.DownloadProgress,
         (event) => {
-          console.log('Download progress event received:', event.payload);
-          // downloadStore.updateProgress(event.payload);
+          downloadStore.updateProgress(event.payload)
         }
       )
 
-      const unlistenStatus = await listen<any>(
-        'lighty://launch-status',
+      const unlistenStatus = await listen<LaunchStatusPayload>(
+        LightyEvent.LaunchStatus,
         (event) => {
-          console.log('Launch status event received:', event.payload);
-          // launchStore.updateStatus(event.payload);
+          consola.info('Launch status event received:', event.payload);
+          launchStore.updateStatus(event.payload)
 
-          // Reset download si lancement réussi
-          if (event.payload.status === 'running') {
-            // downloadStore.complete(event.payload.instance_name);
+          if (event.payload.status === LaunchStatus.Running) {
+            downloadStore.complete(event.payload.instance_name)
           }
         }
       )
 
-      // Console Output
-      const unlistenConsole = await listen<any[]>(
-        'lighty://console-output',
+      const unlistenConsole = await listen<ConsoleLinePayload[]>(
+        LightyEvent.ConsoleOutput,
         (event) => {
           for (const log of event.payload) {
-            console.log('Console log received:', log);
-            consoleStore.addLog(log.pid, {
-              pid: log.pid,
-              stream: log.stream as 'stdout' | 'stderr',
-              line: log.line,
-              timestamp: log.timestamp,
-            });
+            consoleStore.addLog(log.pid, log)
           }
         }
-      );
+      )
 
-      // Errors
-      const unlistenError = await listen<any>(
-        'lighty://error',
+      const unlistenError = await listen<ErrorPayload>(
+        LightyEvent.Error,
         (event) => {
-          console.error('Error event received:', event.payload);
-          // errorStore.setError(event.payload);
+          errorStore.setError(event.payload)
         }
       )
 
@@ -63,7 +58,6 @@ export function useLightyEvents() {
         unlistenConsole,
         unlistenError,
       ]
-      console.log('Listeners set up successfully')
     } catch (error) {
       console.error('Failed to listen to download progress:', error)
     }
