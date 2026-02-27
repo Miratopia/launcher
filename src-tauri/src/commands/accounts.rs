@@ -135,7 +135,7 @@ pub async fn get_account(
     profile_name: &str,
 ) -> Result<Option<UserProfile>, String> {
     // Partie synchrone : lecture du profil depuis le vault
-    let mut profile = with_sh(&state, |sh| {
+    let profile = with_sh(&state, |sh| {
         let client_path = format!("minecraft/{}", profile_name);
         let client = sh
             .load_client(client_path.as_bytes())
