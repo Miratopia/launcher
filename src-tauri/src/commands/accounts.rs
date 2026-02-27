@@ -1,9 +1,5 @@
 use chrono::{DateTime, Utc};
-use lighty_auth::{
-    microsoft::MicrosoftRefresh,
-    offline::OfflineRefresh,
-    AuthProvider,
-};
+use lighty_auth::{microsoft::MicrosoftRefresh, offline::OfflineRefresh, AuthProvider};
 use lighty_launcher::auth::{MicrosoftAuth, OfflineAuth};
 use lighty_launcher::event::EventBus;
 use lighty_launcher::{Authenticator, UserProfile};
@@ -138,15 +134,13 @@ pub async fn get_account(
     state: State<'_, VaultState>,
     profile_name: &str,
 ) -> Result<Option<UserProfile>, String> {
-    with_sh(&state, |sh| {
+    // Partie synchrone : lecture du profil depuis le vault
+    let mut profile = with_sh(&state, |sh| {
         let client_path = format!("minecraft/{}", profile_name);
-
-        // Try to load client from snapshot first
         let client = sh
             .load_client(client_path.as_bytes())
             .or_else(|_| sh.get_client(client_path.as_bytes()))
             .map_err(|e| e.to_string())?;
-
         let store = client.store();
         let username = match store.get(b"username").map_err(|e| e.to_string())? {
             Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
@@ -174,20 +168,22 @@ pub async fn get_account(
         };
         let provider_str = match store.get(b"provider").map_err(|e| e.to_string())? {
             Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
-            None => "unknown".to_string(), // rétrocompat: anciens comptes sans provider
+            None => "unknown".to_string(),
         };
-
         let provider = match provider_str.as_str() {
             "microsoft" => AuthProvider::Microsoft {
                 client_id: "7347d7b7-f14d-40c4-af19-f82204a7851e".to_string(),
             },
             "offline" => AuthProvider::Offline,
             _ => {
-                tracing::warn!("Unknown provider '{}' for account '{}', defaulting to Offline", provider_str, profile_name);
+                tracing::warn!(
+                    "Unknown provider '{}' for account '{}', defaulting to Offline",
+                    provider_str,
+                    profile_name
+                );
                 AuthProvider::Offline
             }
         };
-
         let mut profile = UserProfile {
             id: None,
             username,
@@ -197,7 +193,6 @@ pub async fn get_account(
             banned: false,
             email_verified: true,
             uuid,
-
             money: None,
             role: None,
             expires_in: expires_in.parse::<u64>().unwrap_or(0),
@@ -205,27 +200,29 @@ pub async fn get_account(
             provider,
             refresh_impl: None,
         };
-        // refresh_impl n'est pas sérialisé, on le réinitialise selon le provider (comme dans l'exemple)
         profile.refresh_impl = match &profile.provider {
             AuthProvider::Microsoft { .. } => Some(Arc::new(MicrosoftRefresh)),
             AuthProvider::Offline => Some(Arc::new(OfflineRefresh)),
             AuthProvider::Azuriom { .. } => Some(Arc::new(lighty_auth::azuriom::AzuriomRefresh)),
             AuthProvider::Custom { .. } => None,
         };
-
-        let profile = {
-            let refresh = profile
-                .refresh_impl
-                .as_ref()
-                .ok_or_else(|| "No refresh implementation (cannot refresh token)".to_string())?;
-            refresh
-                .refresh_access_token(&profile)
-                .await
-                .map_err(|e| format!("Failed to refresh profile: {}", e))?
-        };
-
         Ok(Some(profile))
-    })
+    })?;
+    // Si aucun profil trouvé
+    let mut profile = match profile {
+        Some(p) => p,
+        None => return Ok(None),
+    };
+    // Partie asynchrone : refresh du token
+    if let Some(refresh) = profile.refresh_impl.as_ref() {
+        profile = refresh
+            .refresh_access_token(&profile)
+            .await
+            .map_err(|e| format!("Failed to refresh profile: {}", e))?;
+    } else {
+        return Err("No refresh implementation (cannot refresh token)".to_string());
+    }
+    Ok(Some(profile))
 }
 
 #[tauri::command]
