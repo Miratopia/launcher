@@ -3,8 +3,10 @@ mod events;
 mod runners;
 mod types;
 
-use tauri::Manager;
 use lighty_launcher::{core::AppState, event::EventBus};
+use serde_json::json;
+use tauri::Manager;
+use tauri_plugin_store::StoreExt;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run(_app_state: AppState) -> anyhow::Result<()> {
@@ -29,6 +31,7 @@ pub fn run(_app_state: AppState) -> anyhow::Result<()> {
 
     builder = builder.plugin(tauri_plugin_window_state::Builder::new().build());
     builder = builder.plugin(tauri_plugin_opener::init());
+    builder = builder.plugin(tauri_plugin_store::Builder::default().build());
     // builder = builder.manage(event_bus.clone());
     builder = builder.invoke_handler(commands::handler());
     builder = builder.manage(event_bus.clone());
@@ -60,17 +63,17 @@ pub fn run(_app_state: AppState) -> anyhow::Result<()> {
             RunEvent::WindowEvent { label, event, .. } => {
                 if label == "main" {
                     if let WindowEvent::CloseRequested { api: _, .. } = event {
-                    //     // let running = is_mc_running.lock().unwrap();
-                    //     // if *running {
-                    //     //     // Si Minecraft est lancé, on cache la fenêtre
-                    //     //     if let Some(window) = app_handle.get_webview_window("main") {
-                    //     //         let _ = window.hide();
-                    //     //     }
-                    //     //     api.prevent_close();
-                    //     // } else {
-                    //     //     // Sinon, on quitte normalement
-                    //     //     // rien à faire, la fenêtre se ferme
-                    //     // }
+                        //     // let running = is_mc_running.lock().unwrap();
+                        //     // if *running {
+                        //     //     // Si Minecraft est lancé, on cache la fenêtre
+                        //     //     if let Some(window) = app_handle.get_webview_window("main") {
+                        //     //         let _ = window.hide();
+                        //     //     }
+                        //     //     api.prevent_close();
+                        //     // } else {
+                        //     //     // Sinon, on quitte normalement
+                        //     //     // rien à faire, la fenêtre se ferme
+                        //     // }
                     }
                 }
             }
