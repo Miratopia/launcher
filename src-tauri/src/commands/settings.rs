@@ -8,9 +8,12 @@ const SETTINGS_STORE: &str = "settings.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Settings {
-    pub language: Option<String>,
-    pub theme: Option<String>,
-    // Ajoutez d'autres champs ici selon vos besoins
+    pub java_distribution: Option<String>,
+    pub min_memory: Option<u32>,
+    pub max_memory: Option<u32>,
+    pub full_screen: Option<bool>,
+    pub window_width: Option<u32>,
+    pub window_height: Option<u32>,
 }
 
 use std::collections::HashMap;

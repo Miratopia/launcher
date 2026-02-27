@@ -33,16 +33,31 @@
 </template>
 
 <script lang="ts" setup>
-import { invoke } from "@tauri-apps/api/core";
 import { useConsoleStore } from "../stores/consoleStore";
 import { useDownloadStore } from "../stores/downloadStore";
+import { computed } from "vue";
+import { useAccountsCommand } from "../composables/useAccountsCommand";
+import { useModpacksCommand } from "../composables/useModpacksCommand";
+import { useSettingsCommand } from "../composables/useSettingsCommand";
+
+const {
+  listAccounts,
+  getAccount: getAccountInternal,
+  addAccount: addAccountInternal,
+  delAccount: delAccountInternal,
+} = useAccountsCommand();
+const { startModpack } = useModpacksCommand();
+const { displaySettings, updateSettings } = useSettingsCommand();
+
+console.log("Debug page loaded");
+console.log('settings for "mirabuild":', await displaySettings("mirabuild"));
+// await updateSettings("mirabuild", { java_distribution: "temurin", min_memory: 2048, max_memory: 4096 });
 
 const consoleStore = useConsoleStore();
 const downloadStore = useDownloadStore();
 
 const progress = computed(() => downloadStore.getStatusByInstance("mirabuild")?.percentage || 0);
 
-import { computed } from "vue";
 const logs = computed(() => consoleStore.getAllLogs);
 
 async function launchGame() {
@@ -62,18 +77,15 @@ async function launchGame() {
       javaDistribution = "temurin"; // Default to temurin if not provided
     }
 
-    const result = await invoke("launch_game", {
-      modpackName,
-      profileName,
-      javaDistribution,
-    });
+    const result = await startModpack(modpackName, profileName, javaDistribution);
     console.log("✅ Launch result:", result);
   } catch (error) {
     console.error("❌ Launch failed:", error);
   }
 }
 
-const listAccount = await invoke("list_accounts");
+// const listAccount = await invoke("list_accounts");
+const listAccount = await listAccounts();
 console.log("Accounts:", listAccount);
 
 async function addAccount() {
@@ -93,10 +105,7 @@ async function addAccount() {
       }
     }
 
-    const result = await invoke("add_account", {
-      accountType,
-      profileName,
-    });
+    const result = await addAccountInternal(accountType, profileName);
     console.log("✅ Add account result:", result);
   } catch (error) {
     console.error("❌ Add account failed:", error);
@@ -105,7 +114,7 @@ async function addAccount() {
 
 async function getAccount(account: string) {
   try {
-    const result = await invoke("get_account", { profileName: account });
+    const result = await getAccountInternal(account);
     console.log("✅ Get account result:", result);
   } catch (error) {
     console.error("❌ Get account failed:", error);
@@ -114,7 +123,7 @@ async function getAccount(account: string) {
 
 async function removeAccount(account: string) {
   try {
-    const result = await invoke("del_account", { profileName: account });
+    const result = await delAccountInternal(account);
     console.log("✅ Remove account result:", result);
   } catch (error) {
     console.error("❌ Remove account failed:", error);

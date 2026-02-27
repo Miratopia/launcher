@@ -1,11 +1,12 @@
 import { invoke } from "@tauri-apps/api/core"
 
 export function useModpacksCommand() {
-  async function startModpack(modpackName: string, profileName: string) {
+  async function startModpack(modpackName: string, profileName: string, javaDistribution: string) {
     try {
       await invoke('start_modpack', {
         modpackName,
         profileName,
+        javaDistribution,
       })
     } catch (error) {
       console.error('Failed to start modpack:', error)

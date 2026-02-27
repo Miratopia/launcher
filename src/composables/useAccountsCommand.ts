@@ -11,7 +11,7 @@ export function useAccountsCommand() {
     }
   }
 
-  async function addAccount(accountType: string, profileName?: string) {
+  async function addAccount(accountType: string, profileName?: string | null) {
     try {
       await invoke('add_account', { accountType, profileName })
     } catch (error) {
