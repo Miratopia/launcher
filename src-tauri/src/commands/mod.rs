@@ -2,6 +2,7 @@ use tauri::ipc::Invoke;
 
 pub mod accounts;
 pub mod game;
+pub mod settings;
 pub mod window;
 
 pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
@@ -13,5 +14,7 @@ pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         accounts::add_account,
         accounts::del_account,
         accounts::list_accounts,
+        settings::display_settings,
+        settings::update_settings,
     ]
 }
