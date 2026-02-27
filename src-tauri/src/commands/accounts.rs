@@ -106,17 +106,16 @@ fn commit_snapshot(state: &VaultState) -> Result<(), String> {
     Ok(())
 }
 
-#[allow(dead_code)]
-pub fn vault_init(
-    app: AppHandle,
-    state: State<VaultState>,
-    password: String,
-) -> Result<(), String> {
-    let key = KeyDerivation::argon2(&password, &salt_path(&app)); // dérive une clé 32 bytes :contentReference[oaicite:2]{index=2}
-    let sh = Stronghold::new(vault_path(&app), key).map_err(|e| e.to_string())?; // :contentReference[oaicite:3]{index=3}
-    *state.inner.lock().unwrap() = Some(sh);
-    Ok(())
-}
+// pub fn vault_init(
+//     app: AppHandle,
+//     state: State<VaultState>,
+//     password: String,
+// ) -> Result<(), String> {
+//     let key = KeyDerivation::argon2(&password, &salt_path(&app)); // dérive une clé 32 bytes :contentReference[oaicite:2]{index=2}
+//     let sh = Stronghold::new(vault_path(&app), key).map_err(|e| e.to_string())?; // :contentReference[oaicite:3]{index=3}
+//     *state.inner.lock().unwrap() = Some(sh);
+//     Ok(())
+// }
 
 fn with_sh<F, R>(state: &VaultState, f: F) -> Result<R, String>
 where
