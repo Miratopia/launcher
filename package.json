@@ -6,10 +6,12 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
+    "dev:no-fork": "nuxt dev --no-fork",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "tauri": "tauri",
+    "tauri:no-browser": "BROWSER=none tauri",
     "tauri:signer:generate": "bunx tauri signer generate --force -w .tauri/miratopia-launcher.key",
     "install-sccache": "bunx cargo install sccache --locked || true",
     "tauri:build-fast": "cross-env RUSTC_WRAPPER=sccache bunx tauri build",
