@@ -3,7 +3,8 @@ use crate::commands::accounts::{init_vault_if_needed, VaultState};
 
 const VAULT_PASSWORD: &str = "dev-vault-password";
 
-pub fn init(app: &tauri::App) -> tauri::Result<()> {
+/// Setup the vault plugin and initialize the vault if needed
+pub fn setup(app: &tauri::App) -> tauri::Result<()> {
     let salt_path = app
         .path()
         .app_local_data_dir()
@@ -19,4 +20,9 @@ pub fn init(app: &tauri::App) -> tauri::Result<()> {
     }
 
     Ok(())
+}
+
+/// Initialize the vault state and manage it
+pub fn init(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry> {
+    builder.manage(VaultState::default())
 }

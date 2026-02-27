@@ -4,14 +4,26 @@
     windows_subsystem = "windows"
 )]
 
+use lighty_launcher::core::AppState;
 use tracing_subscriber::prelude::*;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let _tracing_guard = init_tracing();
 
-    miratopia_launcher_lib::run();
-    Ok(())
+    tracing::info!("🏁 Démarrage du launcher");
+
+    const QUALIFIER: &str = "fr";
+    const ORGANIZATION: &str = ".miratopia";
+    const APPLICATION: &str = "";
+
+    let app_state = AppState::new(
+        QUALIFIER.to_string(),
+        ORGANIZATION.to_string(),
+        APPLICATION.to_string(),
+    )?;
+
+    miratopia_launcher_lib::run(app_state)
 }
 
 fn init_tracing() -> tracing_appender::non_blocking::WorkerGuard {

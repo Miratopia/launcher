@@ -1,9 +1,11 @@
 mod tray;
 mod vault;
 
-pub fn setup(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry> {
+pub fn setup(mut builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry> {
+    builder = vault::init(builder);
+
     builder.setup(|app| {
-        vault::init(app)?;
+        vault::setup(app)?;
         tray::init(app)?;
 
         Ok(())

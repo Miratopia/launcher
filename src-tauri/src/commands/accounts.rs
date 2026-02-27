@@ -1,3 +1,9 @@
+use chrono::{DateTime, Utc};
+use lighty_auth::{
+    microsoft::MicrosoftRefresh,
+    offline::OfflineRefresh,
+    AuthProvider,
+};
 use lighty_launcher::auth::{MicrosoftAuth, OfflineAuth};
 use lighty_launcher::event::EventBus;
 use lighty_launcher::{Authenticator, UserProfile};
@@ -154,11 +160,39 @@ pub async fn get_account(
             Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
             None => return Ok(None),
         };
+        let refresh_token = match store.get(b"refresh_token").map_err(|e| e.to_string())? {
+            Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
+            None => return Ok(None),
+        };
+        let expires_in = match store.get(b"expires_in").map_err(|e| e.to_string())? {
+            Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
+            None => return Ok(None),
+        };
+        let emited_at = match store.get(b"emited_at").map_err(|e| e.to_string())? {
+            Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
+            None => return Ok(None),
+        };
+        let provider_str = match store.get(b"provider").map_err(|e| e.to_string())? {
+            Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
+            None => "unknown".to_string(), // rétrocompat: anciens comptes sans provider
+        };
 
-        Ok(Some(UserProfile {
+        let provider = match provider_str.as_str() {
+            "microsoft" => AuthProvider::Microsoft {
+                client_id: "7347d7b7-f14d-40c4-af19-f82204a7851e".to_string(),
+            },
+            "offline" => AuthProvider::Offline,
+            _ => {
+                tracing::warn!("Unknown provider '{}' for account '{}', defaulting to Offline", provider_str, profile_name);
+                AuthProvider::Offline
+            }
+        };
+
+        let mut profile = UserProfile {
             id: None,
             username,
             access_token: Some(access_token),
+            refresh_token: Some(refresh_token),
             email: None,
             banned: false,
             email_verified: true,
@@ -166,7 +200,31 @@ pub async fn get_account(
 
             money: None,
             role: None,
-        }))
+            expires_in: expires_in.parse::<u64>().unwrap_or(0),
+            emited_at: emited_at.parse::<DateTime<Utc>>().ok(),
+            provider,
+            refresh_impl: None,
+        };
+        // refresh_impl n'est pas sérialisé, on le réinitialise selon le provider (comme dans l'exemple)
+        profile.refresh_impl = match &profile.provider {
+            AuthProvider::Microsoft { .. } => Some(Arc::new(MicrosoftRefresh)),
+            AuthProvider::Offline => Some(Arc::new(OfflineRefresh)),
+            AuthProvider::Azuriom { .. } => Some(Arc::new(lighty_auth::azuriom::AzuriomRefresh)),
+            AuthProvider::Custom { .. } => None,
+        };
+
+        let profile = {
+            let refresh = profile
+                .refresh_impl
+                .as_ref()
+                .ok_or_else(|| "No refresh implementation (cannot refresh token)".to_string())?;
+            refresh
+                .refresh_access_token(&profile)
+                .await
+                .map_err(|e| format!("Failed to refresh profile: {}", e))?
+        };
+
+        Ok(Some(profile))
     })
 }
 
@@ -228,6 +286,49 @@ pub async fn add_account(
                     .unwrap_or("")
                     .as_bytes()
                     .to_vec(),
+                None,
+            )
+            .map_err(|e| e.to_string())?;
+        store
+            .insert(
+                "refresh_token".as_bytes().to_vec(),
+                profile
+                    .refresh_token
+                    .as_deref()
+                    .unwrap_or("")
+                    .as_bytes()
+                    .to_vec(),
+                None,
+            )
+            .map_err(|e| e.to_string())?;
+        store
+            .insert(
+                "expires_in".as_bytes().to_vec(),
+                profile.expires_in.to_string().as_bytes().to_vec(),
+                None,
+            )
+            .map_err(|e| e.to_string())?;
+        store
+            .insert(
+                "emited_at".as_bytes().to_vec(),
+                profile
+                    .emited_at
+                    .map(|d| d.to_string())
+                    .unwrap_or_default()
+                    .as_bytes()
+                    .to_vec(),
+                None,
+            )
+            .map_err(|e| e.to_string())?;
+        let provider_str = match &profile.provider {
+            AuthProvider::Microsoft { .. } => "microsoft",
+            AuthProvider::Offline => "offline",
+            _ => "unknown",
+        };
+        store
+            .insert(
+                "provider".as_bytes().to_vec(),
+                provider_str.as_bytes().to_vec(),
                 None,
             )
             .map_err(|e| e.to_string())?;

@@ -109,7 +109,7 @@ pub async fn launch_game(
         .map_err(|e| format!("Failed to get account: {}", e))?
         .ok_or_else(|| "Profile not found".to_string())?;
 
-    println!("profile: {:?}", profile);
+    println!("profile: {} (uuid: {})", profile.username, profile.uuid);
     println!("Authentication completed.");
 
     let modpack_url = format!(
@@ -181,10 +181,18 @@ pub async fn launch_game(
     instance = instance.with_mods(mods);
 
     // Stocke l'instance dans la variable globale
-    {
-        let mut guard = MC_INSTANCE.lock().unwrap();
-        *guard = Some(instance.clone());
-    }
+    // {
+    //     let mut guard = MC_INSTANCE.lock().unwrap();
+    //     *guard = Some(instance.clone());
+    // }
+
+    // println!(
+    //     "profile: {} (uuid: {}, token: {:?}, refresh: {:?})",
+    //     profile.username,
+    //     profile.uuid,
+    //     profile.access_token,
+    //     profile.refresh_token,
+    // );
 
     instance
         .launch(&profile, java_dist)
