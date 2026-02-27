@@ -449,12 +449,11 @@ pub async fn list_accounts(state: State<'_, VaultState>) -> Result<Vec<String>, 
     Ok(accounts)
 }
 
-#[tauri::command]
 /// Login with Microsoft/Xbox Live
 ///
 /// # Returns
 /// A `UserProfile` containing the authenticated user's information, or an error message if authentication fails
-pub async fn login_with_microsoft(event_bus: State<'_, EventBus>) -> Result<UserProfile, String> {
+async fn login_with_microsoft(event_bus: State<'_, EventBus>) -> Result<UserProfile, String> {
     let mut auth = MicrosoftAuth::new("7347d7b7-f14d-40c4-af19-f82204a7851e");
 
     auth.set_device_code_callback(|code, url| {
@@ -471,14 +470,13 @@ pub async fn login_with_microsoft(event_bus: State<'_, EventBus>) -> Result<User
     Ok(profile)
 }
 
-#[tauri::command]
 /// Login with an offline account
 ///
 /// # Arguments
 /// - `username`: The username to login with (should not be empty)
 /// # Returns
 /// A `UserProfile` containing the authenticated user's information, or an error message if authentication fails
-pub async fn login_offline(
+async fn login_offline(
     event_bus: State<'_, EventBus>,
     username: String,
 ) -> Result<UserProfile, String> {

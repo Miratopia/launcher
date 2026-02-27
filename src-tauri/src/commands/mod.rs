@@ -13,7 +13,5 @@ pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         accounts::add_account,
         accounts::del_account,
         accounts::list_accounts,
-        accounts::login_with_microsoft,
-        accounts::login_offline,
     ]
 }
