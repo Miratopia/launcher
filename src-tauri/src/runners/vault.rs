@@ -1,5 +1,5 @@
-use tauri::Manager;
 use crate::commands::accounts::{init_vault_if_needed, VaultState};
+use tauri::Manager;
 
 const VAULT_PASSWORD: &str = "dev-vault-password";
 

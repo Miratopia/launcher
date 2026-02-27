@@ -4,17 +4,16 @@ mod runners;
 mod types;
 
 use lighty_launcher::{core::AppState, event::EventBus};
-use serde_json::json;
 use tauri::Manager;
-use tauri_plugin_store::StoreExt;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run(_app_state: AppState) -> anyhow::Result<()> {
     tracing::info!("🏁 Démarrage du launcher");
 
     let event_bus = EventBus::new(1000);
-    let mut builder =
-        tauri::Builder::default().plugin(tauri_plugin_updater::Builder::new().build());
+    let mut builder = tauri::Builder::default()
+        .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_updater::Builder::new().build());
 
     builder = runners::setup(builder);
 
