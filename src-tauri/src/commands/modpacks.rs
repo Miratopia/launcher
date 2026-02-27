@@ -61,7 +61,7 @@ struct ModpackInfo {
 }
 
 #[tauri::command]
-pub async fn launch_game(
+pub async fn start_modpack(
     state: State<'_, VaultState>,
     event_bus: State<'_, EventBus>,
     modpack_name: String,
@@ -216,7 +216,7 @@ pub async fn launch_game(
 }
 
 #[tauri::command]
-pub async fn stop_launch(
+pub async fn stop_modpack(
     _event_bus: State<'_, EventBus>,
     _instance_id: String,
 ) -> Result<String, String> {
@@ -239,7 +239,7 @@ pub async fn stop_launch(
     }
 }
 
-pub fn get_instance(_instance_id: String) -> Result<bool, String> {
-    let guard = MC_INSTANCE.lock().unwrap();
-    Ok(guard.is_some())
-}
+// pub fn get_instance(_instance_id: String) -> Result<bool, String> {
+//     let guard = MC_INSTANCE.lock().unwrap();
+//     Ok(guard.is_some())
+// }
