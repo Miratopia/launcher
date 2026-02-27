@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json;
 use std::sync::Mutex;
 use tauri::{command, AppHandle};
 use tauri_plugin_store::StoreBuilder;
@@ -21,8 +22,14 @@ pub fn get_settings(app: &AppHandle) -> Settings {
     if let Some(settings) = cache.clone() {
         return settings;
     }
-    let store = StoreBuilder::new(app, SETTINGS_STORE.into()).build();
-    let settings: Settings = store.load().unwrap_or_default();
+    let store = StoreBuilder::new(app, std::path::Path::new(SETTINGS_STORE))
+        .build()
+        .expect("Erreur lors de la création du store");
+    let value = store.get("settings");
+    let settings: Settings = match value {
+        Some(val) => serde_json::from_value(val.clone()).unwrap_or_default(),
+        None => Settings::default(),
+    };
     *cache = Some(settings.clone());
     settings
 }
@@ -36,8 +43,12 @@ pub fn display_settings(app: AppHandle) -> Result<Settings, String> {
 /// Commande Tauri pour mettre à jour les settings
 #[command]
 pub fn update_settings(app: AppHandle, new_settings: Settings) -> Result<(), String> {
-    let store = StoreBuilder::new(&app, SETTINGS_STORE.into()).build();
-    store.save(&new_settings).map_err(|e| e.to_string())?;
+    let store = StoreBuilder::new(&app, std::path::Path::new(SETTINGS_STORE))
+        .build()
+        .map_err(|e| e.to_string())?;
+    let value = serde_json::to_value(&new_settings).map_err(|e| e.to_string())?;
+    store.set("settings", value);
+    store.save().map_err(|e| e.to_string())?;
     let mut cache = SETTINGS_CACHE.lock().unwrap();
     *cache = Some(new_settings);
     Ok(())
