@@ -1,4 +1,5 @@
-use crate::commands::accounts::{get_account, VaultState};
+use crate::commands::accounts::get_account;
+use crate::utils::vault::VaultState;
 use lighty_launcher::prelude::InstanceControl;
 use lighty_launcher::Loader;
 use lighty_launcher::{loaders::Mods, prelude::*};

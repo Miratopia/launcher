@@ -7,6 +7,7 @@ use tauri::{
 pub fn init(app: &tauri::App) -> tauri::Result<()> {
     let quit_i = MenuItem::with_id(app, "quit", "Quitter", true, None::<&str>)?;
     let console_i = MenuItem::with_id(app, "console", "Console", true, None::<&str>)?;
+
     let menu = Menu::with_items(app, &[&console_i, &quit_i])?;
 
     TrayIconBuilder::new()

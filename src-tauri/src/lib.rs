@@ -2,14 +2,13 @@ mod commands;
 mod events;
 mod runners;
 mod types;
+mod utils;
 
 use lighty_launcher::{core::AppState, event::EventBus};
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run(_app_state: AppState) -> anyhow::Result<()> {
-    tracing::info!("🏁 Démarrage du launcher");
-
     let event_bus = EventBus::new(1000);
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
