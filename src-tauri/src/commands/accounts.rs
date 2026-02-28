@@ -6,6 +6,7 @@ use lighty_launcher::event::EventBus;
 use lighty_launcher::{Authenticator, UserProfile};
 use open;
 use std::sync::Arc;
+use std::time::Duration;
 use tauri::State;
 use tauri::{AppHandle, Emitter};
 
@@ -374,6 +375,8 @@ async fn login_with_microsoft_app(
     event_bus: State<'_, EventBus>,
 ) -> Result<UserProfile, String> {
     let mut auth = MicrosoftAuth::new("7347d7b7-f14d-40c4-af19-f82204a7851e");
+    auth.set_poll_interval(Duration::from_secs(5));
+    auth.set_timeout(Duration::from_secs(60));
     auth.set_device_code_callback(move |code, url| {
         if let Err(e) = open::that(url) {
             println!("Erreur lors de l'ouverture du navigateur: {:?}", e);
