@@ -1,4 +1,5 @@
 use crate::commands::accounts::get_account;
+use crate::commands::settings::get_modpack_settings;
 use crate::utils::vault::VaultState;
 use lighty_launcher::prelude::InstanceControl;
 use lighty_launcher::Loader;
@@ -63,13 +64,12 @@ struct ModpackInfo {
 
 #[tauri::command]
 pub async fn start_modpack(
+    app_handle: tauri::AppHandle,
     state: State<'_, VaultState>,
     event_bus: State<'_, EventBus>,
     modpack_name: String,
     profile_name: String,
-    java_distribution: String,
 ) -> Result<String, String> {
-    // let event_bus = EventBus::new(1000);
     let (instance_exit_tx, instance_exit_rx) = tokio::sync::oneshot::channel::<Option<i32>>();
 
     let mut receiver = event_bus.subscribe();
@@ -97,13 +97,11 @@ pub async fn start_modpack(
     });
     let launcher_dir = AppState::get_project_dirs();
 
-    let java_dist = match java_distribution.as_str() {
-        "temurin" => JavaDistribution::Temurin,
-        "graalvm" => JavaDistribution::GraalVM,
-        "zulu" => JavaDistribution::Zulu,
-        "liberica" => JavaDistribution::Liberica,
-        _ => return Err(format!("Unknown java distribution: {}", java_distribution)),
-    };
+    let settings = get_modpack_settings(&app_handle, &modpack_name);
+    println!(
+        "Loaded settings for modpack '{}': {:?}",
+        modpack_name, settings
+    );
 
     let profile = get_account(state, &profile_name)
         .await
@@ -196,13 +194,16 @@ pub async fn start_modpack(
     // );
 
     instance
-        .launch(&profile, java_dist)
+        .launch(
+            &profile,
+            settings
+                .java_distribution
+                .unwrap_or(JavaDistribution::Temurin),
+        )
         .with_event_bus(&event_bus.inner().clone())
-        // .with_arguments()
-        // .game_arg("--username", &profile.name)
         .with_jvm_options()
-        .set("Xmx", "6G")
-        .set("Xms", "2G")
+        .set("Xmx", settings.max_memory.unwrap_or(4096).to_string() + "M")
+        .set("Xms", settings.min_memory.unwrap_or(2048).to_string() + "M")
         .done()
         .run()
         .await

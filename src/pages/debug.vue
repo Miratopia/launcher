@@ -53,9 +53,9 @@ const { displayModpackSettings, updateModpackSettings } = useSettingsCommand();
 console.log("Debug page loaded");
 console.log('settings for "mirabuild":', await displayModpackSettings("mirabuild"));
 await updateModpackSettings("mirabuild", {
-  javaDistribution: JavaDistribution.Temurin,
+  javaDistribution: JavaDistribution.Liberica,
   minMemory: 2048,
-  maxMemory: 4096,
+  maxMemory: 6144,
   fullScreen: false,
   windowWidth: 1280,
   windowHeight: 720,
@@ -80,12 +80,8 @@ async function launchGame() {
       alert("Profile name is required.");
       return;
     }
-    let javaDistribution = prompt("Java distribution (e.g., temurin):", "temurin");
-    if (!javaDistribution) {
-      javaDistribution = "temurin"; // Default to temurin if not provided
-    }
 
-    const result = await startModpack(modpackName, profileName, javaDistribution);
+    const result = await startModpack(modpackName, profileName);
     console.log("✅ Launch result:", result);
   } catch (error) {
     console.error("❌ Launch failed:", error);

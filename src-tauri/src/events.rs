@@ -270,7 +270,7 @@ async fn handle_java_event(
                 drop(last);
 
                 let percentage = if total > 0 {
-                    ((downloaded as f64 / total as f64) * 100.0) as u8
+                    (((downloaded as f64 / total as f64) * 100.0).min(100.0)) as u8
                 } else {
                     0
                 };
@@ -409,7 +409,7 @@ async fn handle_launch_event(
                 drop(last);
 
                 let percentage = if total > 0 {
-                    ((downloaded as f64 / total as f64) * 100.0) as u8
+                    (((downloaded as f64 / total as f64) * 100.0).min(100.0)) as u8
                 } else {
                     0
                 };
