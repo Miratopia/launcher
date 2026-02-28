@@ -8,8 +8,9 @@ export function useAccountsCommand() {
       return await invoke('get_active_account')
     } catch (error) {
       consola.error('Failed to get active account:', error)
-      throw error
+      // throw error
     }
+    return null
   }
 
   async function switchActiveAccount(profileName: string) {

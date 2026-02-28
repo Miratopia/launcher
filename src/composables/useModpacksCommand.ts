@@ -6,8 +6,9 @@ export function useModpacksCommand() {
       return await invoke('list_modpacks')
     } catch (error) {
       console.error('Failed to list modpacks:', error)
-      throw error
+      // throw error
     }
+    return []
   }
 
   async function startModpack(modpackName: string) {
