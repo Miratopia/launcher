@@ -1,4 +1,4 @@
-use crate::commands::accounts::get_account;
+use crate::commands::accounts::{display_account, display_active_account, get_active_account};
 use crate::commands::settings::get_modpack_settings;
 use crate::utils::vault::VaultState;
 use lighty_launcher::prelude::InstanceControl;
@@ -63,10 +63,13 @@ struct ModpackInfo {
     ignored_files: Vec<String>,
 }
 #[tauri::command]
-pub async fn list_modpacks(
-    state: State<'_, VaultState>,
-    profile_name: String,
-) -> Result<Vec<String>, String> {
+pub async fn list_modpacks(state: State<'_, VaultState>) -> Result<Vec<String>, String> {
+    let profile_name = display_active_account(state.clone())
+        .await
+        .map_err(|e| format!("Failed to get active account: {}", e))?
+        .ok_or_else(|| "No active profile".to_string())?
+        .username;
+
     // Télécharger le JSON principal
     let url = "https://raw.githubusercontent.com/tacxtv/miratopia-launcher/refs/heads/config/launcher.json";
     let json: Value = reqwest::get(url)
@@ -84,7 +87,7 @@ pub async fn list_modpacks(
         .ok_or("No modpacks array found")?;
 
     // Récupérer le compte
-    let profile = get_account(state, &profile_name)
+    let profile = display_account(state, &profile_name)
         .await
         .map_err(|e| format!("Failed to get account: {}", e))?
         .ok_or_else(|| "Profile not found".to_string())?;
@@ -116,7 +119,6 @@ pub async fn start_modpack(
     state: State<'_, VaultState>,
     event_bus: State<'_, EventBus>,
     modpack_name: String,
-    profile_name: String,
 ) -> Result<String, String> {
     let (instance_exit_tx, instance_exit_rx) = tokio::sync::oneshot::channel::<Option<i32>>();
 
@@ -151,10 +153,10 @@ pub async fn start_modpack(
         modpack_name, settings
     );
 
-    let profile = get_account(state, &profile_name)
+    let profile = get_active_account(state.clone())
         .await
-        .map_err(|e| format!("Failed to get account: {}", e))?
-        .ok_or_else(|| "Profile not found".to_string())?;
+        .map_err(|e| format!("Failed to get active account: {}", e))?
+        .ok_or_else(|| "No active profile".to_string())?;
 
     println!("profile: {} (uuid: {})", profile.username, profile.uuid);
     println!("Authentication completed.");

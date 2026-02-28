@@ -18,6 +18,49 @@ pub struct UserProfilePartial {
 }
 
 #[tauri::command]
+pub async fn display_active_account(
+    state: State<'_, VaultState>,
+) -> Result<Option<UserProfilePartial>, String> {
+    let profile = get_active_account(state).await?;
+    Ok(profile.map(|p| UserProfilePartial {
+        username: p.username,
+        uuid: p.uuid,
+    }))
+}
+
+#[tauri::command]
+pub fn switch_active_account(
+    state: State<'_, VaultState>,
+    profile_name: &str,
+) -> Result<(), String> {
+    with_sh(
+        &state,
+        |sh: &tauri_plugin_stronghold::stronghold::Stronghold| {
+            // On stocke le nom du compte actif dans le client metadata/active_account
+            let metadata_client = sh
+                .get_client(b"metadata/active_account")
+                .or_else(|_| sh.create_client(b"metadata/active_account"))
+                .map_err(|e| e.to_string())?;
+            let metadata_store = metadata_client.store();
+            metadata_store
+                .insert(
+                    b"active_account".to_vec(),
+                    profile_name.as_bytes().to_vec(),
+                    None,
+                )
+                .map_err(|e| e.to_string())?;
+            // Commit le client
+            sh.write_client(b"metadata/active_account")
+                .map_err(|e| e.to_string())?;
+            Ok(())
+        },
+    )?;
+    // Persist to disk
+    commit_snapshot(&state)?;
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn display_account(
     state: State<'_, VaultState>,
     profile_name: &str,
@@ -48,6 +91,34 @@ pub async fn display_account(
         None => return Ok(None),
     };
     Ok(Some(profile))
+}
+
+#[tauri::command]
+pub async fn get_active_account(
+    state: State<'_, VaultState>,
+) -> Result<Option<UserProfile>, String> {
+    // Lire le nom du compte actif depuis le stronghold
+    let active_profile = with_sh(
+        &state,
+        |sh: &tauri_plugin_stronghold::stronghold::Stronghold| {
+            let metadata_client = sh
+                .get_client(b"metadata/active_account")
+                .or_else(|_| sh.create_client(b"metadata/active_account"))
+                .map_err(|e| e.to_string())?;
+            let metadata_store = metadata_client.store();
+            let name = metadata_store
+                .get(b"active_account")
+                .map_err(|e| e.to_string())?;
+            match name {
+                Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string()),
+                None => Ok(String::new()),
+            }
+        },
+    )?;
+    if active_profile.is_empty() {
+        return Ok(None);
+    }
+    get_account(state, &active_profile).await
 }
 
 pub async fn get_account(

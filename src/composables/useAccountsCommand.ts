@@ -3,6 +3,24 @@ import { listen, UnlistenFn } from "@tauri-apps/api/event"
 import consola from "consola"
 
 export function useAccountsCommand() {
+  async function getActiveAccount() {
+    try {
+      return await invoke('get_active_account')
+    } catch (error) {
+      consola.error('Failed to get active account:', error)
+      throw error
+    }
+  }
+
+  async function switchActiveAccount(profileName: string) {
+    try {
+      return await invoke('switch_active_account', { profileName })
+    } catch (error) {
+      consola.error('Failed to switch active account:', error)
+      throw error
+    }
+  }
+
   async function displayAccount(profileName: string) {
     try {
       const accounts = await invoke('display_account', { profileName })
@@ -70,6 +88,8 @@ export function useAccountsCommand() {
   }
 
   return {
+    getActiveAccount,
+    switchActiveAccount,
     displayAccount,
     addAccount,
     delAccount,

@@ -1,21 +1,19 @@
 import { invoke } from "@tauri-apps/api/core"
 
 export function useModpacksCommand() {
-  async function listModpacks(profileName: string): Promise<any> {
+  async function listModpacks(): Promise<any> {
     try {
-      const modpacks = await invoke('list_modpacks', { profileName })
-      return modpacks
+      return await invoke('list_modpacks')
     } catch (error) {
       console.error('Failed to list modpacks:', error)
       throw error
     }
   }
 
-  async function startModpack(modpackName: string, profileName: string) {
+  async function startModpack(modpackName: string) {
     try {
       await invoke('start_modpack', {
         modpackName,
-        profileName,
       })
     } catch (error) {
       console.error('Failed to start modpack:', error)
