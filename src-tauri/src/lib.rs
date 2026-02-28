@@ -29,7 +29,6 @@ pub fn run(_app_state: AppState) -> anyhow::Result<()> {
     }
 
     builder = builder.plugin(tauri_plugin_window_state::Builder::new().build());
-    builder = builder.plugin(tauri_plugin_opener::init());
     builder = builder.plugin(tauri_plugin_store::Builder::default().build());
     // builder = builder.manage(event_bus.clone());
     builder = builder.invoke_handler(commands::handler());

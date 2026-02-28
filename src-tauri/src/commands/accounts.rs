@@ -3,6 +3,7 @@ use lighty_auth::{microsoft::MicrosoftRefresh, offline::OfflineRefresh, AuthProv
 use lighty_launcher::auth::{MicrosoftAuth, OfflineAuth};
 use lighty_launcher::event::EventBus;
 use lighty_launcher::{Authenticator, UserProfile};
+use open;
 
 use iota_stronghold::{KeyProvider, SnapshotPath};
 use std::sync::{Arc, Mutex};
@@ -456,7 +457,9 @@ async fn login_with_microsoft(event_bus: State<'_, EventBus>) -> Result<UserProf
     let mut auth = MicrosoftAuth::new("7347d7b7-f14d-40c4-af19-f82204a7851e");
 
     auth.set_device_code_callback(|code, url| {
-        println!("Please visit: {}", url);
+        if let Err(e) = open::that(url) {
+            println!("Erreur lors de l'ouverture du navigateur: {:?}", e);
+        }
         println!("And enter code: {}", code);
     });
 
