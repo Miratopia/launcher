@@ -14,7 +14,7 @@ pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         accounts::add_account,
         accounts::del_account,
         accounts::list_accounts,
-        settings::display_settings,
-        settings::update_settings,
+        settings::display_modpack_settings,
+        settings::update_modpack_settings,
     ]
 }

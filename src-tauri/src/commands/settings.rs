@@ -58,18 +58,18 @@ impl Default for Settings {
 /// Cache en mémoire des settings, indexé par nom de modpack.
 ///
 /// Objectif : éviter de relire le store à chaque appel.
-/// Le cache est mis à jour lors d’un `get_settings` (miss) et lors d’un `update_settings`.
+/// Le cache est mis à jour lors d’un `get_modpack_settings` (miss) et lors d’un `update_modpack_settings`.
 static SETTINGS_CACHE: LazyLock<Mutex<HashMap<String, Settings>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
-/// Lit les settings d’un modpack depuis le cache ou, à défaut, depuis le store.
+/// Lit les settings d’un modpack depuis le cache ou, à défaut, depuis le store (sous-clé modpacks).
 ///
 /// - Si le cache contient déjà l’entrée, on renvoie une copie.
-/// - Sinon, on charge depuis le store (`settings.json`) à la clé `modpack_name`.
+/// - Sinon, on charge depuis le store (`settings.json`) à la clé `modpacks.{modpack_name}`.
 /// - Si la clé n’existe pas ou si la désérialisation échoue, on renvoie `Settings::default()`.
 ///
 /// Le résultat est ensuite stocké dans le cache.
-pub fn get_settings(app: &AppHandle, modpack_name: &str) -> Settings {
+pub fn get_modpack_settings(app: &AppHandle, modpack_name: &str) -> Settings {
     let mut cache = SETTINGS_CACHE.lock().unwrap();
 
     if let Some(settings) = cache.get(modpack_name) {
@@ -79,10 +79,16 @@ pub fn get_settings(app: &AppHandle, modpack_name: &str) -> Settings {
     let store = StoreBuilder::new(app, std::path::Path::new(SETTINGS_STORE))
         .build()
         .expect("Erreur lors de la création du store");
-    let value = store.get(modpack_name);
-
-    let settings: Settings = match value {
-        Some(val) => serde_json::from_value(val.clone()).unwrap_or_default(),
+    let modpacks_value = store.get("modpacks");
+    let settings: Settings = match modpacks_value {
+        Some(val) => {
+            let map: HashMap<String, serde_json::Value> =
+                serde_json::from_value(val.clone()).unwrap_or_default();
+            match map.get(modpack_name) {
+                Some(mp_val) => serde_json::from_value(mp_val.clone()).unwrap_or_default(),
+                None => Settings::default(),
+            }
+        }
         None => Settings::default(),
     };
 
@@ -90,28 +96,21 @@ pub fn get_settings(app: &AppHandle, modpack_name: &str) -> Settings {
     settings
 }
 
-/// Commande Tauri : retourne les settings d’un modpack.
+/// Commande Tauri : retourne les settings d’un modpack (clé modpacks).
 ///
 /// Cette commande renvoie toujours un `Settings` “utilisable” : si aucune valeur n’est stockée,
 /// les valeurs par défaut sont renvoyées.
-///
-/// Note : étant donné `Settings::default()` et `unwrap_or_default()`, la plupart des champs
-/// seront en pratique `Some(...)` dans le résultat.
 #[command]
-pub fn display_settings(app: AppHandle, modpack_name: String) -> Result<Settings, String> {
-    Ok(get_settings(&app, &modpack_name))
+pub fn display_modpack_settings(app: AppHandle, modpack_name: String) -> Result<Settings, String> {
+    Ok(get_modpack_settings(&app, &modpack_name))
 }
 
-/// Commande Tauri : écrit les settings d’un modpack dans le store et met à jour le cache.
+/// Commande Tauri : écrit les settings d’un modpack dans la sous-clé modpacks et met à jour le cache.
 ///
 /// ⚠️ Important : cette implémentation **n’effectue pas de merge**.
-/// Elle sérialise `new_settings` tel quel et **remplace** la valeur stockée pour `modpack_name`.
-///
-/// Si tu veux une “mise à jour partielle” (où `None` signifie “ne pas toucher”),
-/// il faut d’abord charger l’existant, puis ne remplacer que les champs `Some(...)`,
-/// puis sauver le résultat fusionné.
+/// Elle sérialise `new_settings` tel quel et **remplace** la valeur stockée pour `modpack_name` dans la sous-clé modpacks.
 #[command]
-pub fn update_settings(
+pub fn update_modpack_settings(
     app: AppHandle,
     modpack_name: String,
     new_settings: Settings,
@@ -119,8 +118,17 @@ pub fn update_settings(
     let store = StoreBuilder::new(&app, std::path::Path::new(SETTINGS_STORE))
         .build()
         .map_err(|e| e.to_string())?;
+    // Charger l'existant
+    let mut modpacks_map: HashMap<String, serde_json::Value> = match store.get("modpacks") {
+        Some(val) => serde_json::from_value(val.clone()).unwrap_or_default(),
+        None => HashMap::new(),
+    };
     let value = serde_json::to_value(&new_settings).map_err(|e| e.to_string())?;
-    store.set(&modpack_name, value);
+    modpacks_map.insert(modpack_name.clone(), value);
+    store.set(
+        "modpacks",
+        serde_json::to_value(&modpacks_map).map_err(|e| e.to_string())?,
+    );
     store.save().map_err(|e| e.to_string())?;
     let mut cache = SETTINGS_CACHE.lock().unwrap();
     cache.insert(modpack_name.clone(), new_settings.clone());

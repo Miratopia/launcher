@@ -13,8 +13,8 @@ import consola from 'consola'
  * - `listJavaDistributions(): JavaDistributionListItem[]` : liste les distributions Java disponibles.
  */
 export interface UseSettingsCommand {
-  displaySettings: (modpackName: string) => Promise<Settings>,
-  updateSettings: (modpackName: string, newSettings: Settings) => Promise<Settings>,
+  displayModpackSettings: (modpackName: string) => Promise<Settings>,
+  updateModpackSettings: (modpackName: string, newSettings: Settings) => Promise<Settings>,
   listJavaDistributions: () => JavaDistributionListItem[],
 }
 
@@ -36,17 +36,17 @@ export function useSettingsCommand(): UseSettingsCommand {
   /**
    * Récupère les paramètres d'un modpack depuis le backend Tauri.
    *
-   * Cette fonction appelle la commande Rust `display_settings`.
+   * Cette fonction appelle la commande Rust `display_modpack_settings`.
    *
    * @param modpackName Nom du modpack dont on veut récupérer les paramètres.
    * @returns Les paramètres du modpack.
    * @throws Une erreur si l'appel à la commande Tauri échoue.
    */
-  async function displaySettings(modpackName: string): Promise<Settings> {
+  async function displayModpackSettings(modpackName: string): Promise<Settings> {
     try {
-      return await invoke<Settings>('display_settings', <GetSettingsRequest>{ modpackName })
+      return await invoke<Settings>('display_modpack_settings', <GetSettingsRequest>{ modpackName })
     } catch (error) {
-      consola.error('Failed to display settings:', error)
+      consola.error('Failed to display modpack settings:', error)
       throw error
     }
   }
@@ -54,18 +54,18 @@ export function useSettingsCommand(): UseSettingsCommand {
   /**
    * Met à jour les paramètres d'un modpack.
    *
-   * Cette fonction appelle la commande Rust `update_settings`.
+   * Cette fonction appelle la commande Rust `update_modpack_settings`.
    *
    * @param modpackName Nom du modpack à mettre à jour.
    * @param newSettings Nouveaux paramètres à appliquer.
    * @returns Les paramètres mis à jour.
    * @throws Une erreur si l'appel à la commande Tauri échoue.
    */
-  async function updateSettings(modpackName: string, newSettings: Settings): Promise<Settings> {
+  async function updateModpackSettings(modpackName: string, newSettings: Settings): Promise<Settings> {
     try {
-      return await invoke<Settings>('update_settings', <UpdateSettingsRequest>{ modpackName, newSettings })
+      return await invoke<Settings>('update_modpack_settings', <UpdateSettingsRequest>{ modpackName, newSettings })
     } catch (error) {
-      consola.error('Failed to update settings:', error)
+      consola.error('Failed to update modpack settings:', error)
       throw error
     }
   }
@@ -95,8 +95,8 @@ export function useSettingsCommand(): UseSettingsCommand {
   }
 
   return {
-    displaySettings,
-    updateSettings,
+    displayModpackSettings,
+    updateModpackSettings,
     listJavaDistributions,
   }
 }
