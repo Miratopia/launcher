@@ -39,6 +39,7 @@ import { computed } from "vue";
 import { useAccountsCommand } from "../composables/useAccountsCommand";
 import { useModpacksCommand } from "../composables/useModpacksCommand";
 import { useSettingsCommand } from "../composables/useSettingsCommand";
+import { JavaDistribution } from "../types/settings";
 
 const {
   listAccounts,
@@ -51,7 +52,14 @@ const { displaySettings, updateSettings } = useSettingsCommand();
 
 console.log("Debug page loaded");
 console.log('settings for "mirabuild":', await displaySettings("mirabuild"));
-// await updateSettings("mirabuild", { java_distribution: "temurin", min_memory: 2048, max_memory: 4096 });
+await updateSettings("mirabuild", {
+  javaDistribution: JavaDistribution.Temurin,
+  minMemory: 2048,
+  maxMemory: 4096,
+  fullScreen: false,
+  windowWidth: 1280,
+  windowHeight: 720,
+});
 
 const consoleStore = useConsoleStore();
 const downloadStore = useDownloadStore();
@@ -84,7 +92,6 @@ async function launchGame() {
   }
 }
 
-// const listAccount = await invoke("list_accounts");
 const listAccount = await listAccounts();
 console.log("Accounts:", listAccount);
 
