@@ -21,11 +21,33 @@ pub struct UserProfilePartial {
 pub async fn display_active_account(
     state: State<'_, VaultState>,
 ) -> Result<Option<UserProfilePartial>, String> {
-    let profile = get_active_account(state).await?;
-    Ok(profile.map(|p| UserProfilePartial {
-        username: p.username,
-        uuid: p.uuid,
-    }))
+    let active_profile = with_sh(
+        &state,
+        |sh: &tauri_plugin_stronghold::stronghold::Stronghold| {
+            let metadata_client = sh
+                .get_client(b"metadata/active_account")
+                .or_else(|_| sh.create_client(b"metadata/active_account"))
+                .map_err(|e| e.to_string())?;
+            let metadata_store = metadata_client.store();
+            let name = metadata_store
+                .get(b"active_account")
+                .map_err(|e| e.to_string())?;
+            match name {
+                Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string()),
+                None => Ok(String::new()),
+            }
+        },
+    )?;
+    if active_profile.is_empty() {
+        // Si aucun compte actif, on prend le premier de la liste
+        let accounts = list_accounts(state.clone()).await?;
+        if let Some(first) = accounts.first() {
+            return display_account(state, &first).await;
+        } else {
+            return Ok(None);
+        }
+    }
+    display_account(state, &active_profile).await
 }
 
 #[tauri::command]
@@ -109,9 +131,15 @@ pub async fn get_active_account(
             let name = metadata_store
                 .get(b"active_account")
                 .map_err(|e| e.to_string())?;
-            match name {
-                Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string()),
-                None => Ok(String::new()),
+            match &name {
+                Some(bytes) => {
+                    tracing::info!("Valeur brute active_account lue: {:?}", bytes);
+                    String::from_utf8(bytes.clone()).map_err(|e| e.to_string())
+                }
+                None => {
+                    tracing::info!("Aucune valeur active_account trouvée dans le stronghold");
+                    Ok(String::new())
+                }
             }
         },
     )?;
