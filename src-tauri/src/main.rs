@@ -14,7 +14,7 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("🏁 Démarrage du launcher");
 
     const QUALIFIER: &str = "fr";
-    const ORGANIZATION: &str = ".miratopia";
+    const ORGANIZATION: &str = "fr.miratopia.minecraft-launcher";
     const APPLICATION: &str = "";
 
     let app_state = AppState::new(
