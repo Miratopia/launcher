@@ -48,11 +48,11 @@ const {
   delAccount: delAccountInternal,
 } = useAccountsCommand();
 const { startModpack } = useModpacksCommand();
-const { displaySettings, updateSettings } = useSettingsCommand();
+const { displayModpackSettings, updateModpackSettings } = useSettingsCommand();
 
 console.log("Debug page loaded");
-console.log('settings for "mirabuild":', await displaySettings("mirabuild"));
-await updateSettings("mirabuild", {
+console.log('settings for "mirabuild":', await displayModpackSettings("mirabuild"));
+await updateModpackSettings("mirabuild", {
   javaDistribution: JavaDistribution.Temurin,
   minMemory: 2048,
   maxMemory: 4096,
@@ -112,7 +112,12 @@ async function addAccount() {
       }
     }
 
-    const result = await addAccountInternal(accountType, profileName);
+    const result = await addAccountInternal(accountType, profileName, ({ code, url, cancel }) => {
+      alert("Code: " + code + "\nURL: " + url);
+      setTimeout(() => {
+        cancel();
+      }, 3_000);
+    });
     console.log("✅ Add account result:", result);
   } catch (error) {
     console.error("❌ Add account failed:", error);

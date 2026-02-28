@@ -7,6 +7,7 @@ use lighty_launcher::{Authenticator, UserProfile};
 use open;
 use std::sync::Arc;
 use tauri::State;
+use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
 pub async fn get_account(
@@ -111,6 +112,7 @@ pub async fn get_account(
 
 #[tauri::command]
 pub async fn add_account(
+    app_handle: AppHandle,
     state: State<'_, VaultState>,
     event_bus: State<'_, EventBus>,
     account_type: &str,
@@ -120,7 +122,7 @@ pub async fn add_account(
 
     match account_type {
         "microsoft" => {
-            profile = login_with_microsoft(event_bus).await?;
+            profile = login_with_microsoft_app(app_handle, event_bus).await?;
         }
         "offline" => {
             profile = login_offline(
@@ -339,29 +341,6 @@ pub async fn list_accounts(state: State<'_, VaultState>) -> Result<Vec<String>, 
     Ok(accounts)
 }
 
-/// Login with Microsoft/Xbox Live
-///
-/// # Returns
-/// A `UserProfile` containing the authenticated user's information, or an error message if authentication fails
-async fn login_with_microsoft(event_bus: State<'_, EventBus>) -> Result<UserProfile, String> {
-    let mut auth = MicrosoftAuth::new("7347d7b7-f14d-40c4-af19-f82204a7851e");
-
-    auth.set_device_code_callback(|code, url| {
-        if let Err(e) = open::that(url) {
-            println!("Erreur lors de l'ouverture du navigateur: {:?}", e);
-        }
-        println!("And enter code: {}", code);
-    });
-
-    let profile = auth.authenticate(Some(&event_bus)).await.map_err(|e| {
-        let msg = format!("Auth failed: {:?}", e);
-        tracing::error!(%msg);
-        msg
-    })?;
-
-    Ok(profile)
-}
-
 /// Login with an offline account
 ///
 /// # Arguments
@@ -380,5 +359,38 @@ async fn login_offline(
         msg
     })?;
 
+    Ok(profile)
+}
+
+/// Login with Microsoft account using device code flow
+///
+/// # Arguments
+/// - `app_handle`: The Tauri app handle for emitting events
+/// - `event_bus`: The event bus for emitting auth events
+/// # Returns
+/// A `UserProfile` containing the authenticated user's information, or an error message if authentication fails
+async fn login_with_microsoft_app(
+    app_handle: AppHandle,
+    event_bus: State<'_, EventBus>,
+) -> Result<UserProfile, String> {
+    let mut auth = MicrosoftAuth::new("7347d7b7-f14d-40c4-af19-f82204a7851e");
+    auth.set_device_code_callback(move |code, url| {
+        if let Err(e) = open::that(url) {
+            println!("Erreur lors de l'ouverture du navigateur: {:?}", e);
+        }
+        let _ = app_handle.emit(
+            "lighty://auth-microsoft-code",
+            serde_json::json!({
+                "code": code,
+                "url": url,
+            }),
+        );
+        println!("And enter code: {}", code);
+    });
+    let profile = auth.authenticate(Some(&event_bus)).await.map_err(|e| {
+        let msg = format!("Auth failed: {:?}", e);
+        tracing::error!(%msg);
+        msg
+    })?;
     Ok(profile)
 }

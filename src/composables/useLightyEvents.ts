@@ -60,11 +60,14 @@ export function useLightyEvents() {
       ]
     } catch (error) {
       console.error('Failed to listen to download progress:', error)
+      throw error
     }
   }
 
-  function cleanup() {
-    unlistenFns.forEach(fn => fn())
+  async function cleanup(): Promise<void> {
+    for (const unlisten of unlistenFns) {
+      await unlisten()
+    }
     unlistenFns = []
   }
 
