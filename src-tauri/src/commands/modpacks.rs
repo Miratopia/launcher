@@ -6,6 +6,7 @@ use lighty_launcher::Loader;
 use lighty_launcher::{loaders::Mods, prelude::*};
 use once_cell::sync::Lazy;
 use serde::Deserialize;
+use serde_json::Value;
 use std::sync::Mutex;
 use tauri::State;
 
@@ -60,6 +61,53 @@ struct ModpackInfo {
 
     #[serde(rename = "ignoredFiles")]
     ignored_files: Vec<String>,
+}
+#[tauri::command]
+pub async fn list_modpacks(
+    state: State<'_, VaultState>,
+    profile_name: String,
+) -> Result<Vec<String>, String> {
+    // Télécharger le JSON principal
+    let url = "https://raw.githubusercontent.com/tacxtv/miratopia-launcher/refs/heads/config/launcher.json";
+    let json: Value = reqwest::get(url)
+        .await
+        .map_err(|e| format!("Failed to download launcher.json: {}", e))?
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse launcher.json: {}", e))?;
+
+    // Extraire le tableau des modpacks
+    let config = json.get("config").ok_or("No config found")?;
+    let modpacks = config
+        .get("modpacks")
+        .and_then(|v| v.as_array())
+        .ok_or("No modpacks array found")?;
+
+    // Récupérer le compte
+    let profile = get_account(state, &profile_name)
+        .await
+        .map_err(|e| format!("Failed to get account: {}", e))?
+        .ok_or_else(|| "Profile not found".to_string())?;
+    let username = profile.username;
+
+    // Filtrer les modpacks accessibles
+    let mut allowed = Vec::new();
+    for modpack in modpacks {
+        let whitelisted = modpack
+            .get("whitelisted")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let whitelist = modpack.get("whitelist").and_then(|v| v.as_array());
+        let is_in_whitelist = whitelist.map_or(false, |arr| {
+            arr.iter().any(|u| u.as_str() == Some(&username))
+        });
+        if whitelisted && is_in_whitelist || !whitelisted {
+            if let Some(name) = modpack.get("name").and_then(|v| v.as_str()) {
+                allowed.push(name.to_string());
+            }
+        }
+    }
+    Ok(allowed)
 }
 
 #[tauri::command]

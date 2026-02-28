@@ -11,10 +11,19 @@
       Add Account
     </button>
     <br />
+    <h1>Modpacks</h1>
+    <ul>
+      <li v-for="modpack in modpacks" :key="modpack">
+        {{ modpack }}
+      </li>
+    </ul>
     <ul>
       <li v-for="account in listAccount" :key="account">
         {{ account }}
-        <button class="px-2 py-1 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700" @click="getAccount(account)">
+        <button
+          class="px-2 py-1 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
+          @click="displayAccount(account)"
+        >
           Get Account
         </button>
         <button class="px-2 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700" @click="removeAccount(account)">
@@ -43,12 +52,14 @@ import { JavaDistribution } from "../types/settings";
 
 const {
   listAccounts,
-  getAccount: getAccountInternal,
+  displayAccount: displayAccountInternal,
   addAccount: addAccountInternal,
   delAccount: delAccountInternal,
 } = useAccountsCommand();
-const { startModpack } = useModpacksCommand();
+const { startModpack, listModpacks } = useModpacksCommand();
 const { displayModpackSettings, updateModpackSettings } = useSettingsCommand();
+
+const modpacks = await listModpacks("Tacxounet");
 
 console.log("Debug page loaded");
 console.log('settings for "mirabuild":', await displayModpackSettings("mirabuild"));
@@ -120,12 +131,12 @@ async function addAccount() {
   }
 }
 
-async function getAccount(account: string) {
+async function displayAccount(account: string) {
   try {
-    const result = await getAccountInternal(account);
-    console.log("✅ Get account result:", result);
+    const result = await displayAccountInternal(account);
+    console.log("✅ Display account result:", result);
   } catch (error) {
-    console.error("❌ Get account failed:", error);
+    console.error("❌ Display account failed:", error);
   }
 }
 

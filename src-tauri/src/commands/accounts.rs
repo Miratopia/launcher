@@ -5,12 +5,51 @@ use lighty_launcher::auth::{MicrosoftAuth, OfflineAuth};
 use lighty_launcher::event::EventBus;
 use lighty_launcher::{Authenticator, UserProfile};
 use open;
+use serde::Serialize;
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::State;
 use tauri::{AppHandle, Emitter};
 
+#[derive(Serialize)]
+pub struct UserProfilePartial {
+    pub username: String,
+    pub uuid: String,
+}
+
 #[tauri::command]
+pub async fn display_account(
+    state: State<'_, VaultState>,
+    profile_name: &str,
+) -> Result<Option<UserProfilePartial>, String> {
+    let profile = with_sh(
+        &state,
+        |sh: &tauri_plugin_stronghold::stronghold::Stronghold| {
+            let client_path = format!("minecraft/{}", profile_name);
+            let client = sh
+                .load_client(client_path.as_bytes())
+                .or_else(|_| sh.get_client(client_path.as_bytes()))
+                .map_err(|e| e.to_string())?;
+            let store = client.store();
+            let username = match store.get(b"username").map_err(|e| e.to_string())? {
+                Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
+                None => return Ok(None),
+            };
+            let uuid = match store.get(b"uuid").map_err(|e| e.to_string())? {
+                Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
+                None => return Ok(None),
+            };
+            let profile = UserProfilePartial { username, uuid };
+            Ok(Some(profile))
+        },
+    )?;
+    let profile = match profile {
+        Some(p) => p,
+        None => return Ok(None),
+    };
+    Ok(Some(profile))
+}
+
 pub async fn get_account(
     state: State<'_, VaultState>,
     profile_name: &str,

@@ -3,12 +3,12 @@ import { listen, UnlistenFn } from "@tauri-apps/api/event"
 import consola from "consola"
 
 export function useAccountsCommand() {
-  async function getAccount(profileName: string) {
+  async function displayAccount(profileName: string) {
     try {
-      const accounts = await invoke('get_account', { profileName })
+      const accounts = await invoke('display_account', { profileName })
       return accounts
     } catch (error) {
-      consola.error('Failed to get accounts:', error)
+      consola.error('Failed to display account:', error)
       throw error
     }
   }
@@ -70,7 +70,7 @@ export function useAccountsCommand() {
   }
 
   return {
-    getAccount,
+    displayAccount,
     addAccount,
     delAccount,
     listAccounts,
