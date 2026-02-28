@@ -115,7 +115,7 @@ pub fn update_settings(
     app: AppHandle,
     modpack_name: String,
     new_settings: Settings,
-) -> Result<(), String> {
+) -> Result<Settings, String> {
     let store = StoreBuilder::new(&app, std::path::Path::new(SETTINGS_STORE))
         .build()
         .map_err(|e| e.to_string())?;
@@ -123,7 +123,7 @@ pub fn update_settings(
     store.set(&modpack_name, value);
     store.save().map_err(|e| e.to_string())?;
     let mut cache = SETTINGS_CACHE.lock().unwrap();
-    cache.insert(modpack_name, new_settings);
+    cache.insert(modpack_name.clone(), new_settings.clone());
 
-    Ok(())
+    Ok(new_settings)
 }

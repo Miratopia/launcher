@@ -1,27 +1,102 @@
-import { invoke } from "@tauri-apps/api/core"
+import { invoke } from '@tauri-apps/api/core'
+import { GetSettingsRequest, JavaDistribution, JavaDistributionListItem, Settings, UpdateSettingsRequest } from '../types/settings'
+import consola from 'consola'
 
-export function useSettingsCommand() {
-  async function displaySettings(modpackName: string) {
+/**
+ * Interface définissant les fonctions disponibles pour interagir avec les commandes Tauri liées aux paramètres d'un modpack.
+ *
+ * Cette interface est utilisée pour typer le résultat de la fonction `useSettingsCommand()`, qui retourne un objet contenant ces fonctions.
+ *
+ * Les fonctions incluent :
+ * - `displaySettings(modpackName: string): Promise<Settings>` : récupère les paramètres d'un modpack donné.
+ * - `updateSettings(modpackName: string, newSettings: Settings): Promise<Settings>` : met à jour les paramètres d'un modpack donné.
+ * - `listJavaDistributions(): JavaDistributionListItem[]` : liste les distributions Java disponibles.
+ */
+export interface UseSettingsCommand {
+  displaySettings: (modpackName: string) => Promise<Settings>,
+  updateSettings: (modpackName: string, newSettings: Settings) => Promise<Settings>,
+  listJavaDistributions: () => JavaDistributionListItem[],
+}
+
+/**
+ * Composable Vue permettant d'interagir avec les commandes Tauri
+ * liées aux paramètres d'un modpack.
+ *
+ * Ce composable encapsule les appels `invoke()` vers le backend Rust
+ * afin de simplifier leur utilisation dans l'interface.
+ *
+ * Les fonctions retournées permettent de :
+ * - récupérer les paramètres d'un modpack
+ * - mettre à jour les paramètres d'un modpack
+ * - lister les distributions Java disponibles
+ *
+ * Toutes les erreurs sont loggées via `consola` avant d'être propagées.
+ */
+export function useSettingsCommand(): UseSettingsCommand {
+  /**
+   * Récupère les paramètres d'un modpack depuis le backend Tauri.
+   *
+   * Cette fonction appelle la commande Rust `display_settings`.
+   *
+   * @param modpackName Nom du modpack dont on veut récupérer les paramètres.
+   * @returns Les paramètres du modpack.
+   * @throws Une erreur si l'appel à la commande Tauri échoue.
+   */
+  async function displaySettings(modpackName: string): Promise<Settings> {
     try {
-      const settings = await invoke('display_settings', { modpackName })
-      return settings
+      return await invoke<Settings>('display_settings', <GetSettingsRequest>{ modpackName })
     } catch (error) {
-      console.error('Failed to display settings:', error)
+      consola.error('Failed to display settings:', error)
       throw error
     }
   }
 
-  async function updateSettings(modpackName: string, newSettings: any) {
+  /**
+   * Met à jour les paramètres d'un modpack.
+   *
+   * Cette fonction appelle la commande Rust `update_settings`.
+   *
+   * @param modpackName Nom du modpack à mettre à jour.
+   * @param newSettings Nouveaux paramètres à appliquer.
+   * @returns Les paramètres mis à jour.
+   * @throws Une erreur si l'appel à la commande Tauri échoue.
+   */
+  async function updateSettings(modpackName: string, newSettings: Settings): Promise<Settings> {
     try {
-      await invoke('update_settings', { modpackName, newSettings })
+      return await invoke<Settings>('update_settings', <UpdateSettingsRequest>{ modpackName, newSettings })
     } catch (error) {
-      console.error('Failed to update settings:', error)
+      consola.error('Failed to update settings:', error)
       throw error
     }
+  }
+
+  /**
+   * Retourne la liste des distributions Java disponibles.
+   *
+   * Convertit l'enum `JavaDistribution` en tableau utilisable
+   * dans les composants UI (ex : select, dropdown, radio group).
+   *
+   * @returns Tableau d'objets `{ label, value }` représentant
+   * les distributions Java disponibles.
+   *
+   * Exemple de résultat :
+   * ```ts
+   * [
+   *   { label: "Temurin", value: "temurin" },
+   *   { label: "Zul", value: "zulu" }
+   * ]
+   * ```
+   */
+  function listJavaDistributions(): JavaDistributionListItem[] {
+    return Object.values(JavaDistribution).map((v) => ({
+      label: v.charAt(0).toUpperCase() + v.slice(1),
+      value: v,
+    }))
   }
 
   return {
     displaySettings,
     updateSettings,
+    listJavaDistributions,
   }
 }

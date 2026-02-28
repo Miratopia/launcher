@@ -1,3 +1,12 @@
+export type GetSettingsRequest = {
+  modpackName: string,
+}
+
+export type UpdateSettingsRequest = {
+  modpackName: string,
+  newSettings: Settings,
+}
+
 export interface Settings {
   javaDistribution?: JavaDistribution,
   minMemory?: number,
@@ -12,6 +21,11 @@ export enum JavaDistribution {
   GraalVM = "graalvm",
   Zulu = "zulu",
   Liberica = "liberica",
+}
+
+export interface JavaDistributionListItem {
+  value: JavaDistribution,
+  label: string,
 }
 
 export const DEFAULT_SETTINGS: Settings = {
