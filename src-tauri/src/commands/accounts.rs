@@ -116,7 +116,13 @@ pub async fn get_active_account(
         },
     )?;
     if active_profile.is_empty() {
-        return Ok(None);
+        // Si aucun compte actif, on prend le premier de la liste
+        let accounts = list_accounts(state.clone()).await?;
+        if let Some(first) = accounts.first() {
+            return get_account(state, first).await;
+        } else {
+            return Ok(None);
+        }
     }
     get_account(state, &active_profile).await
 }

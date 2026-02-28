@@ -11,6 +11,8 @@
       Add Account
     </button>
     <br />
+    active account: {{ activeAccount?.username }} ({{ activeAccount?.uuid }})
+    <br />
     <h1>Modpacks</h1>
     <ul>
       <li v-for="modpack in modpacks" :key="modpack">
@@ -20,6 +22,12 @@
     <ul>
       <li v-for="account in listAccount" :key="account">
         {{ account }}
+        <button
+          class="px-2 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          @click="switchActiveAccount(account)"
+        >
+          Switch Active
+        </button>
         <button
           class="px-2 py-1 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
           @click="displayAccount(account)"
@@ -55,11 +63,15 @@ const {
   displayAccount: displayAccountInternal,
   addAccount: addAccountInternal,
   delAccount: delAccountInternal,
+  switchActiveAccount: switchActiveAccountInternal,
+  getActiveAccount,
 } = useAccountsCommand();
 const { startModpack, listModpacks } = useModpacksCommand();
 const { displayModpackSettings, updateModpackSettings } = useSettingsCommand();
 
-const modpacks = await listModpacks("Tacxounet");
+const activeAccount = await getActiveAccount();
+console.log("active account", activeAccount);
+const modpacks = await listModpacks();
 
 console.log("Debug page loaded");
 console.log('settings for "mirabuild":', await displayModpackSettings("mirabuild"));
@@ -146,6 +158,15 @@ async function removeAccount(account: string) {
     console.log("✅ Remove account result:", result);
   } catch (error) {
     console.error("❌ Remove account failed:", error);
+  }
+}
+
+async function switchActiveAccount(account: string) {
+  try {
+    const result = await switchActiveAccountInternal(account);
+    console.log("✅ Switch active account result:", result);
+  } catch (error) {
+    console.error("❌ Switch active account failed:", error);
   }
 }
 </script>
