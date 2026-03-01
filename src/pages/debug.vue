@@ -104,7 +104,7 @@ async function launchGame() {
       return;
     }
 
-    const result = await startModpack(modpackName, profileName);
+    const result = await startModpack(modpackName);
     console.log("✅ Launch result:", result);
   } catch (error) {
     console.error("❌ Launch failed:", error);
