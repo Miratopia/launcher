@@ -63,6 +63,42 @@ struct ModpackInfo {
     #[serde(rename = "ignoredFiles", default)]
     ignored_files: Option<Vec<String>>,
 }
+
+#[tauri::command]
+pub fn open_modpacks_folder() -> Result<(), String> {
+    let launcher_dir = AppState::get_project_dirs();
+    let data_path = launcher_dir.data_dir();
+
+    // Créer le dossier s'il n'existe pas
+    if !data_path.exists() {
+        std::fs::create_dir_all(&data_path)
+            .map_err(|e| format!("Failed to create data folder: {}", e))?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(&data_path)
+            .spawn()
+            .map_err(|e| format!("Failed to open data folder: {}", e))?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&data_path)
+            .spawn()
+            .map_err(|e| format!("Failed to open data folder: {}", e))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&data_path)
+            .spawn()
+            .map_err(|e| format!("Failed to open data folder: {}", e))?;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn list_modpacks(state: State<'_, VaultState>) -> Result<Vec<String>, String> {
     let profile_name = display_active_account(state.clone())
