@@ -27,7 +27,15 @@ pub fn run(_app_state: AppState) -> anyhow::Result<()> {
         println!("Single instance plugin OK");
     }
 
-    builder = builder.plugin(tauri_plugin_window_state::Builder::new().build());
+    /* Remove native windows decoration to use a custom title bar */
+    builder = builder.plugin(
+        tauri_plugin_window_state::Builder::new()
+            .with_state_flags(
+                tauri_plugin_window_state::StateFlags::all()
+                    & !tauri_plugin_window_state::StateFlags::DECORATIONS,
+            )
+            .build(),
+    );
     builder = builder.plugin(tauri_plugin_store::Builder::default().build());
     // builder = builder.manage(event_bus.clone());
     builder = builder.invoke_handler(commands::handler());

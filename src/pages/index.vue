@@ -1,6 +1,16 @@
+<script setup lang="ts">
+</script>
+
 <template>
-  <router-link to="/debug" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300">debug</router-link>
-  <router-link to="/splashscreen" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300"
-    >splashscreen</router-link
-  >Index
+  <div class="flex flex-1 relative z-10 overflow-hidden">
+    <!-- Left Panel -->
+    <SidebarSidePanel />
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col">
+      <HeaderBar />
+      <ServerStatus />
+      <PlayBar />
+    </div>
+  </div>
 </template>
