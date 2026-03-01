@@ -19,6 +19,7 @@
         {{ modpack }}
       </li>
     </ul>
+    <button @click="openModpacksFolder">Open Modpacks Folder</button>
     <ul>
       <li v-for="account in listAccount" :key="account">
         {{ account }}
@@ -66,7 +67,7 @@ const {
   switchActiveAccount: switchActiveAccountInternal,
   getActiveAccount,
 } = useAccountsCommand();
-const { startModpack, listModpacks } = useModpacksCommand();
+const { startModpack, listModpacks, openModpacksFolder } = useModpacksCommand();
 const { displayModpackSettings, updateModpackSettings } = useSettingsCommand();
 
 const activeAccount = await getActiveAccount();

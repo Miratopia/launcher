@@ -31,9 +31,19 @@ export function useModpacksCommand() {
     }
   }
 
+  async function openModpacksFolder() {
+    try {
+      await invoke('open_modpacks_folder')
+    } catch (error) {
+      console.error('Failed to open modpacks folder:', error)
+      throw error
+    }
+  }
+
   return {
     listModpacks,
     startModpack,
     stopModpack,
+    openModpacksFolder,
   }
 }

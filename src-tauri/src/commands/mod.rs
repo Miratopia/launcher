@@ -11,6 +11,7 @@ pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         modpacks::list_modpacks,
         modpacks::start_modpack,
         modpacks::stop_modpack,
+        modpacks::open_modpacks_folder,
         accounts::display_account,
         accounts::add_account,
         accounts::del_account,
