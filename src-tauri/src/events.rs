@@ -1,11 +1,15 @@
+use crate::types::*;
+use lighty_launcher::event::AuthEvent;
+use lighty_launcher::event::CoreEvent;
+use lighty_launcher::event::JavaEvent;
+use lighty_launcher::event::LaunchEvent;
+use lighty_launcher::event::LoaderEvent;
 use lighty_launcher::event::{Event, EventBus};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::Mutex;
 use tokio::time::{Duration, Instant};
 use tracing::info;
-
-use crate::types::*;
 
 /// State partagé pour tracking du total_bytes et instance
 #[derive(Debug, Clone, Default)]
@@ -92,35 +96,31 @@ async fn handle_event(
         }
 
         // === LOADER EVENTS ===
-        Event::Loader(loader_event) => {
-            use lighty_launcher::event::LoaderEvent;
-
-            match loader_event {
-                LoaderEvent::FetchingData {
-                    loader,
-                    minecraft_version,
-                    loader_version,
-                } => {
-                    let payload = LaunchStatusPayload {
-                        status: LaunchStatus::Initializing,
-                        phase: format!("Fetching {} {}", loader, loader_version),
-                        instance_name: minecraft_version,
-                        pid: None,
-                    };
-                    let _ = app.emit("lighty://launch-status", payload);
-                }
-                LoaderEvent::DataFetched { loader, .. } => {
-                    let payload = LaunchStatusPayload {
-                        status: LaunchStatus::Initializing,
-                        phase: format!("{} metadata loaded", loader),
-                        instance_name: String::new(),
-                        pid: None,
-                    };
-                    let _ = app.emit("lighty://launch-status", payload);
-                }
-                _ => {}
+        Event::Loader(loader_event) => match loader_event {
+            LoaderEvent::FetchingData {
+                loader,
+                minecraft_version,
+                loader_version,
+            } => {
+                let payload = LaunchStatusPayload {
+                    status: LaunchStatus::Initializing,
+                    phase: format!("Fetching {} {}", loader, loader_version),
+                    instance_name: minecraft_version,
+                    pid: 0,
+                };
+                let _ = app.emit("lighty://launch-status", payload);
             }
-        }
+            LoaderEvent::DataFetched { loader, .. } => {
+                let payload = LaunchStatusPayload {
+                    status: LaunchStatus::Initializing,
+                    phase: format!("{} metadata loaded", loader),
+                    instance_name: String::new(),
+                    pid: 0,
+                };
+                let _ = app.emit("lighty://launch-status", payload);
+            }
+            _ => {}
+        },
 
         // === CORE EVENTS ===
         Event::Core(core_event) => handle_core_event(app, core_event).await,
@@ -131,7 +131,7 @@ async fn handle_event(
                 status: LaunchStatus::Running,
                 phase: "Game running".to_string(),
                 instance_name: evt.instance_name,
-                pid: Some(evt.pid),
+                pid: evt.pid,
             };
             let _ = app.emit("lighty://launch-status", payload);
         }
@@ -141,7 +141,7 @@ async fn handle_event(
                 status: LaunchStatus::Launched,
                 phase: "Game window opened".to_string(),
                 instance_name: evt.instance_name,
-                pid: Some(evt.pid),
+                pid: evt.pid,
             };
             let _ = app.emit("lighty://launch-status", payload);
 
@@ -156,7 +156,7 @@ async fn handle_event(
                 status: LaunchStatus::Exited,
                 phase: format!("Game exited (code: {:?})", evt.exit_code),
                 instance_name: evt.instance_name,
-                pid: None,
+                pid: 0,
             };
             let _ = app.emit("lighty://launch-status", payload);
 
@@ -192,40 +192,36 @@ async fn handle_event(
                 status: LaunchStatus::Exited,
                 phase: "Instance deleted".to_string(),
                 instance_name: evt.instance_name,
-                pid: None,
+                pid: 0,
             };
             let _ = app.emit("lighty://launch-status", payload);
         }
 
         // === AUTH EVENTS ===
-        Event::Auth(auth_event) => {
-            use lighty_launcher::event::AuthEvent;
-
-            match auth_event {
-                AuthEvent::AuthenticationStarted { provider } => {
-                    let payload = LaunchStatusPayload {
-                        status: LaunchStatus::Initializing,
-                        phase: format!("Authenticating with {}", provider),
-                        instance_name: String::new(),
-                        pid: None,
-                    };
-                    let _ = app.emit("lighty://launch-status", payload);
-                }
-                AuthEvent::AuthenticationFailed { provider, error } => {
-                    let error_payload = ErrorPayload {
-                        category: "auth".to_string(),
-                        message: format!("Authentication failed: {}", provider),
-                        details: Some(error),
-                        timestamp: std::time::SystemTime::now()
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap()
-                            .as_secs(),
-                    };
-                    let _ = app.emit("lighty://error", error_payload);
-                }
-                _ => {}
+        Event::Auth(auth_event) => match auth_event {
+            AuthEvent::AuthenticationStarted { provider } => {
+                let payload = LaunchStatusPayload {
+                    status: LaunchStatus::Initializing,
+                    phase: format!("Authenticating with {}", provider),
+                    instance_name: String::new(),
+                    pid: 0,
+                };
+                let _ = app.emit("lighty://launch-status", payload);
             }
-        }
+            AuthEvent::AuthenticationFailed { provider, error } => {
+                let error_payload = ErrorPayload {
+                    category: "auth".to_string(),
+                    message: format!("Authentication failed: {}", provider),
+                    details: Some(error),
+                    timestamp: std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs(),
+                };
+                let _ = app.emit("lighty://error", error_payload);
+            }
+            _ => {}
+        },
     }
 }
 
@@ -236,8 +232,6 @@ async fn handle_java_event(
     progress_state: &Arc<Mutex<ProgressState>>,
     throttle: Duration,
 ) {
-    use lighty_launcher::event::JavaEvent;
-
     match event {
         JavaEvent::JavaDownloadStarted {
             distribution,
@@ -276,7 +270,7 @@ async fn handle_java_event(
                 drop(last);
 
                 let percentage = if total > 0 {
-                    ((downloaded as f64 / total as f64) * 100.0) as u8
+                    (((downloaded as f64 / total as f64) * 100.0).min(100.0)) as u8
                 } else {
                     0
                 };
@@ -346,7 +340,7 @@ async fn handle_java_event(
                 status: LaunchStatus::Installing,
                 phase: format!("Java ready: {}", binary_path),
                 instance_name: String::new(),
-                pid: None,
+                pid: 0,
             };
             let _ = app.emit("lighty://launch-status", payload);
         }
@@ -362,8 +356,6 @@ async fn handle_launch_event(
     progress_state: &Arc<Mutex<ProgressState>>,
     throttle: Duration,
 ) {
-    use lighty_launcher::event::LaunchEvent;
-
     match event {
         LaunchEvent::IsInstalled { .. } => {
             // Ne pas émettre d'événement pour IsInstalled pendant le lancement
@@ -396,7 +388,7 @@ async fn handle_launch_event(
                 status: LaunchStatus::Downloading,
                 phase: "Downloading game files".to_string(),
                 instance_name: version,
-                pid: None,
+                pid: 0,
             };
             let _ = app.emit("lighty://launch-status", status);
         }
@@ -417,7 +409,7 @@ async fn handle_launch_event(
                 drop(last);
 
                 let percentage = if total > 0 {
-                    ((downloaded as f64 / total as f64) * 100.0) as u8
+                    (((downloaded as f64 / total as f64) * 100.0).min(100.0)) as u8
                 } else {
                     0
                 };
@@ -463,7 +455,7 @@ async fn handle_launch_event(
                 status: LaunchStatus::Installing,
                 phase: "Starting game...".to_string(),
                 instance_name: version,
-                pid: None,
+                pid: 0,
             };
             let _ = app.emit("lighty://launch-status", payload);
         }
@@ -473,7 +465,7 @@ async fn handle_launch_event(
                 status: LaunchStatus::Running,
                 phase: "Game launched".to_string(),
                 instance_name: version,
-                pid: Some(pid),
+                pid: pid,
             };
             let _ = app.emit("lighty://launch-status", payload);
         }
@@ -494,7 +486,7 @@ async fn handle_launch_event(
                 status: LaunchStatus::Failed,
                 phase: "Launch failed".to_string(),
                 instance_name: version,
-                pid: None,
+                pid: 0,
             };
             let _ = app.emit("lighty://launch-status", status);
         }
@@ -504,8 +496,6 @@ async fn handle_launch_event(
 }
 
 async fn handle_core_event(app: &AppHandle, event: lighty_launcher::event::CoreEvent) {
-    use lighty_launcher::event::CoreEvent;
-
     match event {
         CoreEvent::ExtractionStarted {
             archive_type,
@@ -516,7 +506,7 @@ async fn handle_core_event(app: &AppHandle, event: lighty_launcher::event::CoreE
                 status: LaunchStatus::Installing,
                 phase: format!("Extracting {} ({} files)", archive_type, file_count),
                 instance_name: String::new(),
-                pid: None,
+                pid: 0,
             };
             let _ = app.emit("lighty://launch-status", payload);
         }

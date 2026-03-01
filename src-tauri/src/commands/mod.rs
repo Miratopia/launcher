@@ -1,17 +1,24 @@
-use tauri::{ipc::Invoke, Runtime};
+use tauri::ipc::Invoke;
 
 pub mod accounts;
-pub mod game;
+pub mod modpacks;
+pub mod settings;
+pub mod window;
 
-pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static {
+pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
     tauri::generate_handler![
-        game::launch_game,
-        game::stop_launch,
-        accounts::get_account,
+        window::open_console_window,
+        modpacks::list_modpacks,
+        modpacks::start_modpack,
+        modpacks::stop_modpack,
+        accounts::display_account,
         accounts::add_account,
         accounts::del_account,
         accounts::list_accounts,
-        accounts::login_with_microsoft,
-        accounts::login_offline,
+        accounts::switch_active_account,
+        accounts::get_active_account,
+        accounts::display_active_account,
+        settings::display_modpack_settings,
+        settings::update_modpack_settings,
     ]
 }

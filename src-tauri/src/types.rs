@@ -44,7 +44,7 @@ pub struct LaunchStatusPayload {
     pub status: LaunchStatus,
     pub phase: String,
     pub instance_name: String,
-    pub pid: Option<u32>,
+    pub pid: u32,
 }
 
 /// Ligne de console

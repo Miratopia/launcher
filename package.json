@@ -1,23 +1,27 @@
 {
   "name": "launcher_test_rust",
   "private": true,
-  "version": "0.1.9",
+  "version": "0.1.10",
   "type": "module",
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
+    "dev:no-fork": "nuxt dev --no-fork",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "tauri": "tauri",
+    "tauri:no-browser": "BROWSER=none tauri",
     "tauri:signer:generate": "bunx tauri signer generate --force -w .tauri/miratopia-launcher.key",
     "install-sccache": "bunx cargo install sccache --locked || true",
     "tauri:build-fast": "cross-env RUSTC_WRAPPER=sccache bunx tauri build",
-    "tauri:dev-fast": "cross-env RUSTC_WRAPPER=sccache bunx tauri dev"
+    "tauri:dev-fast": "cross-env RUSTC_WRAPPER=sccache bunx tauri dev",
+    "tauri:build:win": "$private = Get-Content -Raw '.\\.tauri\\miratopia-launcher.key'; $env:TAURI_SIGNING_PRIVATE_KEY = $private; bun run tauri build"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.0",
     "@tauri-apps/plugin-opener": "^2.5.3",
+    "@tauri-apps/plugin-store": "~2",
     "@tauri-apps/plugin-stronghold": "^2.3.1",
     "@tauri-apps/plugin-updater": "~2",
     "@tauri-apps/plugin-window-state": "^2.4.1",

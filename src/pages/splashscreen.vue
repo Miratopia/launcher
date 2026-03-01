@@ -1,6 +1,8 @@
 <template>
   <div>
-    <router-link to="/">index</router-link>
+    <router-link to="/" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300"
+      >go to index</router-link
+    >
     Splashscreen
     <br />
     pre:

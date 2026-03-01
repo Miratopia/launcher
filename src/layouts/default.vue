@@ -4,6 +4,4 @@
   </div>
 </template>
 
-<script lang="ts" setup>
-console.log("Default layout loaded");
-</script>
+<script lang="ts" setup></script>

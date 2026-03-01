@@ -1,5 +1,8 @@
+import { defineNuxtConfig } from 'nuxt/config'
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  compatibilityDate: '2026-02-26',
   telemetry: false,
   devtools: { enabled: true },
   ssr: false,
@@ -22,7 +25,6 @@ export default defineNuxtConfig({
     envPrefix: ['VITE_', 'TAURI_'],
     server: {
       strictPort: true,
-      host: '0.0.0.0',
       hmr: {
         protocol: 'ws',
         host: '0.0.0.0',
@@ -30,4 +32,4 @@ export default defineNuxtConfig({
       },
     },
   },
-});
+})

@@ -1,9 +1,12 @@
-use crate::commands::accounts::{get_account, VaultState};
+use crate::commands::accounts::{display_account, display_active_account, get_active_account};
+use crate::commands::settings::get_modpack_settings;
+use crate::utils::vault::VaultState;
 use lighty_launcher::prelude::InstanceControl;
 use lighty_launcher::Loader;
 use lighty_launcher::{loaders::Mods, prelude::*};
 use once_cell::sync::Lazy;
 use serde::Deserialize;
+use serde_json::Value;
 use std::sync::Mutex;
 use tauri::State;
 
@@ -59,16 +62,64 @@ struct ModpackInfo {
     #[serde(rename = "ignoredFiles")]
     ignored_files: Vec<String>,
 }
+#[tauri::command]
+pub async fn list_modpacks(state: State<'_, VaultState>) -> Result<Vec<String>, String> {
+    let profile_name = display_active_account(state.clone())
+        .await
+        .map_err(|e| format!("Failed to get active account: {}", e))?
+        .ok_or_else(|| "No active profile".to_string())?
+        .username;
+
+    // Télécharger le JSON principal
+    let url = "https://raw.githubusercontent.com/tacxtv/miratopia-launcher/refs/heads/config/launcher.json";
+    let json: Value = reqwest::get(url)
+        .await
+        .map_err(|e| format!("Failed to download launcher.json: {}", e))?
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse launcher.json: {}", e))?;
+
+    // Extraire le tableau des modpacks
+    let config = json.get("config").ok_or("No config found")?;
+    let modpacks = config
+        .get("modpacks")
+        .and_then(|v| v.as_array())
+        .ok_or("No modpacks array found")?;
+
+    // Récupérer le compte
+    let profile = display_account(state, &profile_name)
+        .await
+        .map_err(|e| format!("Failed to get account: {}", e))?
+        .ok_or_else(|| "Profile not found".to_string())?;
+    let username = profile.username;
+
+    // Filtrer les modpacks accessibles
+    let mut allowed = Vec::new();
+    for modpack in modpacks {
+        let whitelisted = modpack
+            .get("whitelisted")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let whitelist = modpack.get("whitelist").and_then(|v| v.as_array());
+        let is_in_whitelist = whitelist.map_or(false, |arr| {
+            arr.iter().any(|u| u.as_str() == Some(&username))
+        });
+        if whitelisted && is_in_whitelist || !whitelisted {
+            if let Some(name) = modpack.get("name").and_then(|v| v.as_str()) {
+                allowed.push(name.to_string());
+            }
+        }
+    }
+    Ok(allowed)
+}
 
 #[tauri::command]
-pub async fn launch_game(
+pub async fn start_modpack(
+    app_handle: tauri::AppHandle,
     state: State<'_, VaultState>,
     event_bus: State<'_, EventBus>,
     modpack_name: String,
-    profile_name: String,
-    java_distribution: String,
 ) -> Result<String, String> {
-    // let event_bus = EventBus::new(1000);
     let (instance_exit_tx, instance_exit_rx) = tokio::sync::oneshot::channel::<Option<i32>>();
 
     let mut receiver = event_bus.subscribe();
@@ -96,20 +147,18 @@ pub async fn launch_game(
     });
     let launcher_dir = AppState::get_project_dirs();
 
-    let java_dist = match java_distribution.as_str() {
-        "temurin" => JavaDistribution::Temurin,
-        "graalvm" => JavaDistribution::GraalVM,
-        "zulu" => JavaDistribution::Zulu,
-        "liberica" => JavaDistribution::Liberica,
-        _ => return Err(format!("Unknown java distribution: {}", java_distribution)),
-    };
+    let settings = get_modpack_settings(&app_handle, &modpack_name);
+    println!(
+        "Loaded settings for modpack '{}': {:?}",
+        modpack_name, settings
+    );
 
-    let profile = get_account(state, &profile_name)
+    let profile = get_active_account(state.clone())
         .await
-        .map_err(|e| format!("Failed to get account: {}", e))?
-        .ok_or_else(|| "Profile not found".to_string())?;
+        .map_err(|e| format!("Failed to get active account: {}", e))?
+        .ok_or_else(|| "No active profile".to_string())?;
 
-    println!("profile: {:?}", profile);
+    println!("profile: {} (uuid: {})", profile.username, profile.uuid);
     println!("Authentication completed.");
 
     let modpack_url = format!(
@@ -181,19 +230,30 @@ pub async fn launch_game(
     instance = instance.with_mods(mods);
 
     // Stocke l'instance dans la variable globale
-    {
-        let mut guard = MC_INSTANCE.lock().unwrap();
-        *guard = Some(instance.clone());
-    }
+    // {
+    //     let mut guard = MC_INSTANCE.lock().unwrap();
+    //     *guard = Some(instance.clone());
+    // }
+
+    // println!(
+    //     "profile: {} (uuid: {}, token: {:?}, refresh: {:?})",
+    //     profile.username,
+    //     profile.uuid,
+    //     profile.access_token,
+    //     profile.refresh_token,
+    // );
 
     instance
-        .launch(&profile, java_dist)
+        .launch(
+            &profile,
+            settings
+                .java_distribution
+                .unwrap_or(JavaDistribution::Temurin),
+        )
         .with_event_bus(&event_bus.inner().clone())
-        // .with_arguments()
-        // .game_arg("--username", &profile.name)
         .with_jvm_options()
-        .set("Xmx", "6G")
-        .set("Xms", "2G")
+        .set("Xmx", settings.max_memory.unwrap_or(4096).to_string() + "M")
+        .set("Xms", settings.min_memory.unwrap_or(2048).to_string() + "M")
         .done()
         .run()
         .await
@@ -208,7 +268,7 @@ pub async fn launch_game(
 }
 
 #[tauri::command]
-pub async fn stop_launch(
+pub async fn stop_modpack(
     _event_bus: State<'_, EventBus>,
     _instance_id: String,
 ) -> Result<String, String> {
@@ -231,7 +291,7 @@ pub async fn stop_launch(
     }
 }
 
-pub fn get_instance(_instance_id: String) -> Result<bool, String> {
-    let guard = MC_INSTANCE.lock().unwrap();
-    Ok(guard.is_some())
-}
+// pub fn get_instance(_instance_id: String) -> Result<bool, String> {
+//     let guard = MC_INSTANCE.lock().unwrap();
+//     Ok(guard.is_some())
+// }
