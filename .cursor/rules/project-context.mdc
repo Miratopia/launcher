@@ -1,0 +1,60 @@
+---
+description: Contexte global du projet Miratopia Minecraft Launcher (Tauri 2 + Nuxt 4)
+alwaysApply: true
+---
+
+# Miratopia Minecraft Launcher
+
+Launcher Minecraft desktop : **Tauri 2** (Rust) + **Nuxt 4** (Vue 3, SPA, `ssr: false`). Auth Microsoft/offline, modpacks, lancement Minecraft (Fabric, Forge, NeoForge, Quilt), auto-update GitHub.
+
+## Stack
+
+Nuxt 4 · Vue 3 (`<script setup lang="ts">`) · Tauri 2 · Rust stable · Tailwind CSS · Pinia · Bun · `lighty-launcher` (lib Minecraft) · `tauri-plugin-stronghold` (credentials)
+
+## Structure
+
+- `src/` — Nuxt srcDir (pages, composables, stores, layouts, components, assets)
+- `src-tauri/` — Rust backend (commands/, events.rs, types.rs, capabilities/)
+- Config racine : `nuxt.config.ts`, `tailwind.config.ts`, `package.json`
+
+## Règles Nuxt
+
+- **SPA uniquement** (`ssr: false`) — jamais de logique SSR, server routes, ou `useAsyncData` côté serveur
+- Imports : toujours `~/` (résout vers `src/`), jamais de chemins relatifs `../`
+- Auto-imports activés : Vue APIs (`ref`, `computed`…), composables, components, `defineStore`
+- `<NuxtLink>` au lieu de `<router-link>`, `navigateTo()` pour la navigation programmatique
+- Composables dans `src/composables/` avec préfixe `use`
+- Stores Pinia dans `src/stores/` nommés `{name}Store.ts` (style Options API)
+- Components dans `src/components/` en PascalCase
+
+## Règles Vue / TypeScript
+
+- Toujours `<script setup lang="ts">` dans les SFC
+- TypeScript strict : pas de `any`, typer les retours `invoke()` et les payloads d'événements
+- `ref()` pour primitifs, `reactive()` pour objets, `computed()` pour état dérivé
+- Nettoyer les listeners Tauri dans `onUnmounted`
+
+## Règles Tailwind
+
+- Thème dark par défaut (`bg-gray-800`, `text-gray-100`)
+- Couleur `primary` = yellow
+- Classes utilitaires uniquement, pas de CSS custom sauf nécessité
+
+## Règles Tauri / Rust
+
+- Commands dans `src-tauri/src/commands/`, async, retournent `Result<T, String>`
+- IPC : `invoke()` (requête/réponse) + `listen("lighty://...")` (événements streaming)
+- Événements préfixés `lighty://` : download-progress, launch-status, console-output, error
+- Logging via `tracing` (`info!`, `warn!`, `error!`), jamais `println!`
+- Erreurs avec `Result` + `?`, éviter `.unwrap()` en production
+- Credentials dans Stronghold vault, `zeroize` pour données sensibles en mémoire
+
+## Workflow dev
+
+```bash
+bun install && bun run tauri dev     # ou bun run tauri:dev-fast (sccache)
+```
+
+Cible principale : Windows (MinGW-w64). Versioning via `scripts/bump.ts` (synchronise package.json, Cargo.toml, tauri.conf.json).
+
+Voir `AGENTS.md` à la racine pour la documentation complète des conventions.
