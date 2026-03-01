@@ -101,8 +101,8 @@ pub async fn list_modpacks(state: State<'_, VaultState>) -> Result<Vec<String>, 
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
         let whitelist = modpack.get("whitelist").and_then(|v| v.as_array());
-        let is_in_whitelist = whitelist.map_or(false, |arr| {
-            arr.iter().any(|u| u.as_str() == Some(&username))
+        let is_in_whitelist = whitelist.map_or(true, |arr| {
+            arr.is_empty() || arr.iter().any(|u| u.as_str() == Some(&username))
         });
         if whitelisted && is_in_whitelist || !whitelisted {
             if let Some(name) = modpack.get("name").and_then(|v| v.as_str()) {
