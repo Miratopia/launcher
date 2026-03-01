@@ -3,9 +3,9 @@ import { listen, UnlistenFn } from "@tauri-apps/api/event"
 import consola from "consola"
 
 export function useAccountsCommand() {
-  async function getActiveAccount() {
+  async function displayActiveAccount() {
     try {
-      return await invoke('get_active_account')
+      return await invoke('display_active_account')
     } catch (error) {
       consola.error('Failed to get active account:', error)
       // throw error
@@ -89,7 +89,7 @@ export function useAccountsCommand() {
   }
 
   return {
-    getActiveAccount,
+    displayActiveAccount,
     switchActiveAccount,
     displayAccount,
     addAccount,

@@ -1,8 +1,24 @@
 <script setup lang="ts">
 import { FolderOpen, Monitor, Rocket, ChevronRight, X, ToggleLeft, ToggleRight } from 'lucide-vue-next'
 import { useLauncherStore } from '../../stores/launcherStore'
+import type { Settings } from '../../types/settings'
 
 const store = useLauncherStore()
+
+async function saveDisplaySettings() {
+  const settings: Partial<Settings> = {
+    fullScreen: store.fullscreen,
+    windowWidth: parseInt(store.resWidth) || 1920,
+    windowHeight: parseInt(store.resHeight) || 1080,
+  }
+  const current = store.modpackSettings ?? {}
+  await store.saveModpackSettings({ ...current, ...settings })
+}
+
+function toggleFullscreen() {
+  store.fullscreen = !store.fullscreen
+  saveDisplaySettings()
+}
 </script>
 
 <template>
@@ -34,12 +50,14 @@ const store = useLauncherStore()
             v-model="store.resWidth"
             type="text"
             class="w-20 input-field"
+            @blur="saveDisplaySettings()"
           />
           <span class="text-white/30">&times;</span>
           <input
             v-model="store.resHeight"
             type="text"
             class="w-20 input-field"
+            @blur="saveDisplaySettings()"
           />
           <button
             :class="[
@@ -48,7 +66,7 @@ const store = useLauncherStore()
                 ? 'bg-amber-500/20 border-amber-500/30 text-amber-400'
                 : 'bg-black/30 border-white/10 text-white/60 hover:text-white',
             ]"
-            @click="store.fullscreen = !store.fullscreen"
+            @click="toggleFullscreen()"
           >
             <component :is="store.fullscreen ? ToggleRight : ToggleLeft" :size="18" />
             <span class="text-sm">Plein écran</span>

@@ -1,4 +1,14 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
+import { useLauncherStore } from '../stores/launcherStore'
+import { useAccountsStore } from '../stores/accountsStore'
+
+const launcherStore = useLauncherStore()
+const accountsStore = useAccountsStore()
+
+onMounted(async () => {
+  await Promise.all([launcherStore.init(), accountsStore.init()])
+})
 </script>
 
 <template>

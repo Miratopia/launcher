@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ExternalLink } from 'lucide-vue-next'
+import { ExternalLink, Loader2 } from 'lucide-vue-next'
 import { useLauncherStore } from '../../stores/launcherStore'
 
 const store = useLauncherStore()
@@ -28,7 +28,16 @@ const store = useLauncherStore()
       <!-- Modpacks -->
       <div class="mt-8">
         <h2 class="section-label mb-4">Modpacks</h2>
-        <div class="space-y-2">
+
+        <div v-if="store.modpacksLoading" class="flex items-center justify-center py-6">
+          <Loader2 :size="20" class="text-amber-400 animate-spin" />
+        </div>
+
+        <div v-else-if="store.modpacks.length === 0" class="text-center py-6">
+          <p class="text-sm text-white/30">Aucun modpack disponible</p>
+        </div>
+
+        <div v-else class="space-y-2">
           <SidebarModpackCard
             v-for="pack in store.modpacks"
             :key="pack.id"

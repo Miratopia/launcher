@@ -1,13 +1,32 @@
 import { defineStore } from 'pinia'
+import { useModpacksCommand } from '../composables/useModpacksCommand'
+import { useSettingsCommand } from '../composables/useSettingsCommand'
+import type { Settings } from '../types/settings'
+import consola from 'consola'
+
+export interface Modpack {
+  id: string
+  name: string
+  version: string
+  mods: number
+}
+
+export interface Announcement {
+  date: string
+  title: string
+  type: 'event' | 'update'
+}
 
 export const useLauncherStore = defineStore('launcher', {
   state: () => ({
     memory: 8,
     memoryInput: '8',
     launching: false,
-    selectedPack: 'smp',
+    selectedPack: '',
     showSettings: false,
     settingsTab: 'launcher' as 'launcher' | 'modpack' | 'accounts',
+
+    wallpaper: '',
 
     fullscreen: false,
     resWidth: '1920',
@@ -16,10 +35,11 @@ export const useLauncherStore = defineStore('launcher', {
     showConsole: false,
     closeLauncher: true,
 
-    modpacks: [
-      { id: 'smp', name: 'Miratopia SMP', version: '1.20.4', mods: 42 },
-      { id: 's1', name: 'Miratopia Saison 1', version: '1.19.2', mods: 38 },
-    ] as Modpack[],
+    modpacks: [] as Modpack[],
+    modpacksLoading: false,
+
+    modpackSettings: null as Settings | null,
+    modpackSettingsLoading: false,
 
     announcements: [
       { date: '27 juin 2025', title: "Nouvel événement : Attaquons tous ensemble l'Enderdragon !", type: 'event' },
@@ -45,6 +65,9 @@ export const useLauncherStore = defineStore('launcher', {
     openSettings(tab?: 'launcher' | 'modpack' | 'accounts') {
       if (tab) this.settingsTab = tab
       this.showSettings = true
+      if (this.settingsTab === 'modpack' && this.selectedPack) {
+        this.loadModpackSettings()
+      }
     },
 
     closeSettings() {
@@ -97,25 +120,82 @@ export const useLauncherStore = defineStore('launcher', {
       }
     },
 
+    async fetchModpacks() {
+      const { listModpacks } = useModpacksCommand()
+      try {
+        this.modpacksLoading = true
+        const result = await listModpacks()
+        if (Array.isArray(result) && result.length > 0) {
+          this.modpacks = result.map((name: string) => ({
+            id: name,
+            name,
+            version: '',
+            mods: 0,
+          }))
+          if (!this.selectedPack || !this.modpacks.find((p) => p.id === this.selectedPack)) {
+            this.selectedPack = this.modpacks[0].id
+          }
+        }
+      } catch (error) {
+        consola.error('Failed to fetch modpacks:', error)
+      } finally {
+        this.modpacksLoading = false
+      }
+    },
+
+    async loadModpackSettings() {
+      if (!this.selectedPack) return
+      const { displayModpackSettings } = useSettingsCommand()
+      try {
+        this.modpackSettingsLoading = true
+        this.modpackSettings = await displayModpackSettings(this.selectedPack)
+        if (this.modpackSettings?.maxMemory) {
+          this.setMemory(Math.round(this.modpackSettings.maxMemory / 1024))
+        }
+        if (this.modpackSettings?.fullScreen !== undefined) {
+          this.fullscreen = this.modpackSettings.fullScreen
+        }
+        if (this.modpackSettings?.windowWidth) {
+          this.resWidth = String(this.modpackSettings.windowWidth)
+        }
+        if (this.modpackSettings?.windowHeight) {
+          this.resHeight = String(this.modpackSettings.windowHeight)
+        }
+      } catch (error) {
+        consola.error('Failed to load modpack settings:', error)
+      } finally {
+        this.modpackSettingsLoading = false
+      }
+    },
+
+    async saveModpackSettings(settings: Settings) {
+      if (!this.selectedPack) return
+      const { updateModpackSettings } = useSettingsCommand()
+      try {
+        this.modpackSettings = await updateModpackSettings(this.selectedPack, settings)
+      } catch (error) {
+        consola.error('Failed to save modpack settings:', error)
+        throw error
+      }
+    },
+
     async launchGame() {
-      this.launching = true
-      // TODO: invoke Tauri command
-      setTimeout(() => {
+      if (!this.selectedPack) return
+      const { startModpack } = useModpacksCommand()
+      try {
+        this.launching = true
+        await startModpack(this.selectedPack)
+      } catch (error) {
+        consola.error('Failed to launch game:', error)
         this.launching = false
-      }, 3000)
+      }
+    },
+
+    async init() {
+      await this.fetchModpacks()
+      if (this.selectedPack) {
+        await this.loadModpackSettings()
+      }
     },
   },
 })
-
-export interface Modpack {
-  id: string
-  name: string
-  version: string
-  mods: number
-}
-
-export interface Announcement {
-  date: string
-  title: string
-  type: 'event' | 'update'
-}

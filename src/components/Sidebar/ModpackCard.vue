@@ -10,6 +10,8 @@ const props = defineProps<{
 defineEmits<{
   select: [id: string]
 }>()
+
+console.log('pack', props.pack);
 </script>
 
 <template>

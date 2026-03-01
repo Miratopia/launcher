@@ -64,12 +64,12 @@ const {
   addAccount: addAccountInternal,
   delAccount: delAccountInternal,
   switchActiveAccount: switchActiveAccountInternal,
-  getActiveAccount,
+  displayActiveAccount,
 } = useAccountsCommand();
 const { startModpack, listModpacks } = useModpacksCommand();
 const { displayModpackSettings, updateModpackSettings } = useSettingsCommand();
 
-const activeAccount = await getActiveAccount();
+const activeAccount = await displayActiveAccount();
 console.log("active account", activeAccount);
 const modpacks = await listModpacks();
 
@@ -104,7 +104,7 @@ async function launchGame() {
       return;
     }
 
-    const result = await startModpack(modpackName, profileName);
+    const result = await startModpack(modpackName);
     console.log("✅ Launch result:", result);
   } catch (error) {
     console.error("❌ Launch failed:", error);
