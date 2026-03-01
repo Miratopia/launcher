@@ -57,10 +57,11 @@ struct ModpackInfo {
     #[serde(rename = "files")]
     files_info: Vec<FileModpackInfo>,
 
-    whitelist: Vec<String>,
+    #[serde(default)]
+    whitelist: Option<Vec<String>>,
 
-    #[serde(rename = "ignoredFiles")]
-    ignored_files: Vec<String>,
+    #[serde(rename = "ignoredFiles", default)]
+    ignored_files: Option<Vec<String>>,
 }
 #[tauri::command]
 pub async fn list_modpacks(state: State<'_, VaultState>) -> Result<Vec<String>, String> {
@@ -91,7 +92,7 @@ pub async fn list_modpacks(state: State<'_, VaultState>) -> Result<Vec<String>, 
         .await
         .map_err(|e| format!("Failed to get account: {}", e))?
         .ok_or_else(|| "Profile not found".to_string())?;
-    let username = profile.username;
+    let username = profile.username.to_lowercase();
 
     // Filtrer les modpacks accessibles
     let mut allowed = Vec::new();
@@ -101,8 +102,13 @@ pub async fn list_modpacks(state: State<'_, VaultState>) -> Result<Vec<String>, 
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
         let whitelist = modpack.get("whitelist").and_then(|v| v.as_array());
-        let is_in_whitelist = whitelist.map_or(false, |arr| {
-            arr.iter().any(|u| u.as_str() == Some(&username))
+        let is_in_whitelist = whitelist.map_or(true, |arr| {
+            arr.is_empty()
+                || arr.iter().any(|u| {
+                    u.as_str()
+                        .map(|value| value.trim().to_lowercase() == username)
+                        .unwrap_or(false)
+                })
         });
         if whitelisted && is_in_whitelist || !whitelisted {
             if let Some(name) = modpack.get("name").and_then(|v| v.as_str()) {
