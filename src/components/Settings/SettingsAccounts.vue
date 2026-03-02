@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Trash2, CheckCircle, Loader2, Globe, Wifi } from 'lucide-vue-next'
+import { Trash2, CheckCircle, Loader2, Globe, Wifi, XCircle } from 'lucide-vue-next'
+import { openUrl } from '@tauri-apps/plugin-opener'
 import { useAccountsStore } from '../../stores/accountsStore'
 
 const store = useAccountsStore()
@@ -96,18 +97,25 @@ async function handleSwitch(profileName: string) {
     >
       <p class="text-sm text-white/80 mb-2">
         Connectez-vous sur
-        <a :href="store.microsoftAuthCode.url" target="_blank" class="text-blue-400 underline">
+        <button class="text-blue-400 underline" @click="openUrl(store.microsoftAuthCode!.url)">
           {{ store.microsoftAuthCode.url }}
-        </a>
+        </button>
       </p>
       <p class="text-lg font-mono font-bold text-blue-400 tracking-widest text-center py-2">
         {{ store.microsoftAuthCode.code }}
       </p>
+      <button
+        class="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 text-white/60 hover:text-red-400 transition-all"
+        @click="store.cancelMicrosoftAuth()"
+      >
+        <XCircle :size="16" />
+        <span class="text-sm">Annuler</span>
+      </button>
     </div>
 
     <!-- Loading state -->
     <div
-      v-if="store.addingAccount"
+      v-if="store.addingAccount && !store.microsoftAuthCode"
       class="flex items-center justify-center gap-3 py-4"
     >
       <Loader2 :size="20" class="text-amber-400 animate-spin" />

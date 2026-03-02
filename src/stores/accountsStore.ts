@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useAccountsCommand } from '../composables/useAccountsCommand'
+import { useLauncherStore } from './launcherStore'
 
 export interface Account {
   username: string
@@ -11,6 +12,8 @@ export interface MicrosoftAuthCode {
   code: string
   url: string
 }
+
+let _cancelMicrosoftAuth: (() => void) | null = null
 
 export const useAccountsStore = defineStore('accounts', {
   state: () => ({
@@ -54,6 +57,14 @@ export const useAccountsStore = defineStore('accounts', {
       }
     },
 
+    async refreshLauncherData() {
+      const launcher = useLauncherStore()
+      await launcher.fetchModpacks()
+      if (launcher.selectedPack) {
+        await launcher.loadModpackSettings()
+      }
+    },
+
     async addOfflineAccount(profileName: string) {
       const { addAccount } = useAccountsCommand()
       try {
@@ -61,9 +72,19 @@ export const useAccountsStore = defineStore('accounts', {
         await addAccount('offline', profileName)
         await this.fetchAccounts()
         await this.fetchActiveAccount()
+        await this.refreshLauncherData()
       } finally {
         this.addingAccount = false
       }
+    },
+
+    cancelMicrosoftAuth() {
+      if (_cancelMicrosoftAuth) {
+        _cancelMicrosoftAuth()
+        _cancelMicrosoftAuth = null
+      }
+      this.addingAccount = false
+      this.microsoftAuthCode = null
     },
 
     async addMicrosoftAccount(): Promise<void> {
@@ -71,25 +92,31 @@ export const useAccountsStore = defineStore('accounts', {
       try {
         this.addingAccount = true
         this.microsoftAuthCode = null
+        _cancelMicrosoftAuth = null
         await addAccount('microsoft', null, ({ code, url, cancel }) => {
-          console.log('code', code)
+          _cancelMicrosoftAuth = cancel
           this.microsoftAuthCode = { code, url }
         })
         this.microsoftAuthCode = null
+        _cancelMicrosoftAuth = null
         await this.fetchAccounts()
         await this.fetchActiveAccount()
+        await this.refreshLauncherData()
       } finally {
         this.addingAccount = false
         this.microsoftAuthCode = null
+        _cancelMicrosoftAuth = null
       }
     },
 
     async removeAccount(profileName: string) {
       const { delAccount } = useAccountsCommand()
-      await delAccount(profileName)
-      await this.fetchAccounts()
-      if (this.activeAccount?.username === profileName) {
+      try {
+        await delAccount(profileName)
+      } finally {
+        await this.fetchAccounts()
         await this.fetchActiveAccount()
+        await this.refreshLauncherData()
       }
     },
 
@@ -97,6 +124,7 @@ export const useAccountsStore = defineStore('accounts', {
       const { switchActiveAccount } = useAccountsCommand()
       await switchActiveAccount(profileName)
       await this.fetchActiveAccount()
+      await this.refreshLauncherData()
     },
 
     async init() {

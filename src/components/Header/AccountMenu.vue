@@ -5,6 +5,7 @@ import { useAccountsStore } from '../../stores/accountsStore'
 import { useLauncherStore } from '../../stores/launcherStore'
 
 const store = useAccountsStore()
+const launcherStore = useLauncherStore()
 
 const open = ref(false)
 const menuRef = ref<HTMLElement | null>(null)
@@ -23,9 +24,9 @@ function onClickOutside(e: MouseEvent) {
   }
 }
 
-async function handleAddMicrosoft() {
+function handleAddAccount() {
   close()
-  await store.addMicrosoftAccount()
+  launcherStore.openSettings('accounts')
 }
 
 async function handleLogout() {
@@ -82,8 +83,7 @@ defineExpose({ close })
         <div class="p-2">
           <button
             class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors"
-            :disabled="store.addingAccount"
-            @click="handleAddMicrosoft"
+            @click="handleAddAccount"
           >
             <UserPlus :size="16" class="text-amber-400/70" />
             <span class="text-sm text-white/80">Ajouter un compte</span>
@@ -91,7 +91,7 @@ defineExpose({ close })
           <button
             v-if="store.accounts.length > 1"
             class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors"
-            @click="close(); useLauncherStore().openSettings('accounts')"
+            @click="close(); launcherStore.openSettings('accounts')"
           >
             <RefreshCw :size="16" class="text-white/40" />
             <span class="text-sm text-white/80">Changer de compte</span>

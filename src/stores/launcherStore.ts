@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useModpacksCommand } from '../composables/useModpacksCommand'
 import { useSettingsCommand } from '../composables/useSettingsCommand'
+import { useAccountsStore } from './accountsStore'
 import type { Settings } from '../types/settings'
 import consola from 'consola'
 
@@ -71,6 +72,10 @@ export const useLauncherStore = defineStore('launcher', {
     },
 
     closeSettings() {
+      const accounts = useAccountsStore()
+      if (accounts.addingAccount) {
+        accounts.cancelMicrosoftAuth()
+      }
       this.showSettings = false
     },
 
@@ -135,9 +140,14 @@ export const useLauncherStore = defineStore('launcher', {
           if (!this.selectedPack || !this.modpacks.find((p) => p.id === this.selectedPack)) {
             this.selectedPack = this.modpacks[0].id
           }
+        } else {
+          this.modpacks = []
+          this.selectedPack = ''
         }
       } catch (error) {
         consola.error('Failed to fetch modpacks:', error)
+        this.modpacks = []
+        this.selectedPack = ''
       } finally {
         this.modpacksLoading = false
       }
