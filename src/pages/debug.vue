@@ -68,7 +68,7 @@ const {
   displayActiveAccount,
 } = useAccountsCommand();
 const { startModpack, listModpacks, openModpacksFolder } = useModpacksCommand();
-const { displayModpackSettings, updateModpackSettings } = useSettingsCommand();
+const { displayModpackSettings, updateModpackSettings, osTotalMemoryInfo } = useSettingsCommand();
 
 const activeAccount = await displayActiveAccount();
 console.log("active account", activeAccount);
@@ -91,6 +91,8 @@ const downloadStore = useDownloadStore();
 const progress = computed(() => downloadStore.getStatusByInstance("mirabuild")?.percentage || 0);
 
 const logs = computed(() => consoleStore.getAllLogs);
+
+console.log("total memory (MB):", await osTotalMemoryInfo());
 
 async function launchGame() {
   try {

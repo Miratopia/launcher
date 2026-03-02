@@ -3,6 +3,7 @@ use tauri::ipc::Invoke;
 pub mod accounts;
 pub mod modpacks;
 pub mod settings;
+pub mod utils;
 pub mod window;
 
 pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
@@ -21,5 +22,6 @@ pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         accounts::display_active_account,
         settings::display_modpack_settings,
         settings::update_modpack_settings,
+        utils::os_total_memory_info,
     ]
 }
