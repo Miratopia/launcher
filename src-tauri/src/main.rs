@@ -4,8 +4,15 @@
     windows_subsystem = "windows"
 )]
 
-use lighty_launcher::core::AppState;
+use lighty_launcher::{
+    core::AppState,
+    launch::{init_downloader_config, DownloaderConfig},
+};
 use tracing_subscriber::prelude::*;
+
+const MAX_RETRIES: u32 = 3;
+const INITIAL_DELAY_MS: u32 = 200;
+const MAX_CONCURRENT_DOWNLOADS: usize = 16;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -22,6 +29,13 @@ async fn main() -> anyhow::Result<()> {
         ORGANIZATION.to_string(),
         APPLICATION.to_string(),
     )?;
+
+    init_downloader_config(DownloaderConfig {
+        max_concurrent_downloads: MAX_CONCURRENT_DOWNLOADS,
+        max_retries: MAX_RETRIES,
+        initial_delay_ms: INITIAL_DELAY_MS,
+        ..Default::default()
+    });
 
     miratopia_launcher_lib::run(app_state)
 }
