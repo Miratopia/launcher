@@ -135,3 +135,20 @@ pub fn update_modpack_settings(
 
     Ok(new_settings)
 }
+
+/// Reset all settings to the default values (settings.json + memory cache)
+#[command]
+pub fn reset_all_settings(app: AppHandle) -> Result<(), String> {
+    let store = StoreBuilder::new(&app, std::path::Path::new(SETTINGS_STORE))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    store.clear();
+    store.save().map_err(|e| e.to_string())?;
+
+    let mut cache = SETTINGS_CACHE.lock().unwrap();
+    cache.clear();
+
+    tracing::info!("All settings have been reset");
+    Ok(())
+}

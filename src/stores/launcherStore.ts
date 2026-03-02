@@ -2,6 +2,9 @@ import { defineStore } from 'pinia'
 import { useModpacksCommand } from '../composables/useModpacksCommand'
 import { useSettingsCommand } from '../composables/useSettingsCommand'
 import { useAccountsStore } from './accountsStore'
+import { useLaunchStore } from './launchStore'
+import { useDownloadStore } from './downloadStore'
+import { LaunchStatus } from '../types/lighty-events'
 import type { Settings } from '../types/settings'
 import consola from 'consola'
 
@@ -25,7 +28,7 @@ export const useLauncherStore = defineStore('launcher', {
     launching: false,
     selectedPack: '',
     showSettings: false,
-    settingsTab: 'launcher' as 'launcher' | 'modpack' | 'accounts',
+    settingsTab: 'launcher' as string,
 
     wallpaper: '',
 
@@ -53,21 +56,59 @@ export const useLauncherStore = defineStore('launcher', {
       return this.modpacks.find((p) => p.id === this.selectedPack)
     },
 
-    memoryOptions(): number[] {
-      return [2, 4, 6, 8, 10, 12, 16]
+    activeSettingsModpackId(): string | null {
+      if (this.settingsTab.startsWith('modpack:')) {
+        return this.settingsTab.slice('modpack:'.length)
+      }
+      return null
+    },
+
+    settingsTitle(): string {
+      if (this.settingsTab === 'launcher') return 'Launcher'
+      if (this.settingsTab === 'accounts') return 'Comptes'
+      const modpack = this.modpacks.find((p) => p.id === this.activeSettingsModpackId)
+      return modpack?.name ?? ''
+    },
+
+    isGameActive(): boolean {
+      const launchStore = useLaunchStore()
+      const downloadStore = useDownloadStore()
+
+      if (this.launching) return true
+      if (!this.selectedPack) return false
+
+      const packProgress = downloadStore.getStatusByInstance(this.selectedPack)
+        ?? downloadStore.getStatusByInstance('')
+      if (packProgress) return true
+
+      const status = launchStore.currentStatus.get(this.selectedPack)
+      if (status && ![LaunchStatus.Exited, LaunchStatus.Failed].includes(status.status)) return true
+
+      return launchStore.isRunning(this.selectedPack)
+    },
+
+    memoryMin(): number {
+      return 4
+    },
+    memoryMax(): number {
+      return 16
+    },
+    memoryStep(): number {
+      return 1
     },
   },
 
   actions: {
-    selectPack(id: string) {
+    async selectPack(id: string) {
       this.selectedPack = id
+      await this.loadModpackSettings(id)
     },
 
-    openSettings(tab?: 'launcher' | 'modpack' | 'accounts') {
+    openSettings(tab?: string) {
       if (tab) this.settingsTab = tab
       this.showSettings = true
-      if (this.settingsTab === 'modpack' && this.selectedPack) {
-        this.loadModpackSettings()
+      if (this.activeSettingsModpackId) {
+        this.loadModpackSettings(this.activeSettingsModpackId)
       }
     },
 
@@ -85,25 +126,13 @@ export const useLauncherStore = defineStore('launcher', {
     },
 
     decreaseMemory() {
-      const opts = this.memoryOptions
-      const idx = opts.indexOf(this.memory)
-      if (idx > 0) {
-        this.setMemory(opts[idx - 1])
-      } else if (idx === -1 && this.memory > opts[0]) {
-        const lower = opts.filter((v) => v < this.memory)
-        if (lower.length) this.setMemory(lower[lower.length - 1])
-      }
+      const val = Math.round((this.memory - this.memoryStep) * 10) / 10
+      if (val >= this.memoryMin) this.setMemory(val)
     },
 
     increaseMemory() {
-      const opts = this.memoryOptions
-      const idx = opts.indexOf(this.memory)
-      if (idx !== -1 && idx < opts.length - 1) {
-        this.setMemory(opts[idx + 1])
-      } else if (idx === -1 && this.memory < opts[opts.length - 1]) {
-        const higher = opts.filter((v) => v > this.memory)
-        if (higher.length) this.setMemory(higher[0])
-      }
+      const val = Math.round((this.memory + this.memoryStep) * 10) / 10
+      if (val <= this.memoryMax) this.setMemory(val)
     },
 
     updateMemoryInput(input: string) {
@@ -153,12 +182,13 @@ export const useLauncherStore = defineStore('launcher', {
       }
     },
 
-    async loadModpackSettings() {
-      if (!this.selectedPack) return
+    async loadModpackSettings(modpackId?: string) {
+      const id = modpackId ?? this.selectedPack
+      if (!id) return
       const { displayModpackSettings } = useSettingsCommand()
       try {
         this.modpackSettingsLoading = true
-        this.modpackSettings = await displayModpackSettings(this.selectedPack)
+        this.modpackSettings = await displayModpackSettings(id)
         if (this.modpackSettings?.maxMemory) {
           this.setMemory(Math.round(this.modpackSettings.maxMemory / 1024))
         }
@@ -178,11 +208,12 @@ export const useLauncherStore = defineStore('launcher', {
       }
     },
 
-    async saveModpackSettings(settings: Settings) {
-      if (!this.selectedPack) return
+    async saveModpackSettings(settings: Settings, modpackId?: string) {
+      const id = modpackId ?? this.selectedPack
+      if (!id) return
       const { updateModpackSettings } = useSettingsCommand()
       try {
-        this.modpackSettings = await updateModpackSettings(this.selectedPack, settings)
+        this.modpackSettings = await updateModpackSettings(id, settings)
       } catch (error) {
         consola.error('Failed to save modpack settings:', error)
         throw error

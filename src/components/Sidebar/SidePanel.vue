@@ -43,6 +43,7 @@ const store = useLauncherStore()
             :key="pack.id"
             :pack="pack"
             :selected="store.selectedPack === pack.id"
+            :disabled="store.isGameActive"
             @select="store.selectPack"
           />
         </div>

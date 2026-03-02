@@ -5,6 +5,7 @@ import type { Modpack } from '../../stores/launcherStore'
 const props = defineProps<{
   pack: Modpack
   selected: boolean
+  disabled?: boolean
 }>()
 
 defineEmits<{
@@ -17,12 +18,14 @@ console.log('pack', props.pack);
 <template>
   <div
     :class="[
-      'flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300',
-      selected
-        ? 'bg-gradient-to-r from-amber-500/15 to-transparent border border-amber-500/30 shadow-lg shadow-amber-500/5'
-        : 'bg-white/5 border border-transparent hover:bg-white/10',
+      'flex items-center gap-3 p-3 rounded-xl transition-all duration-300',
+      disabled && !selected
+        ? 'bg-white/5 border border-transparent opacity-30 cursor-not-allowed'
+        : selected
+          ? 'bg-gradient-to-r from-amber-500/15 to-transparent border border-amber-500/30 shadow-lg shadow-amber-500/5 cursor-pointer'
+          : 'bg-white/5 border border-transparent hover:bg-white/10 cursor-pointer',
     ]"
-    @click="$emit('select', props.pack.id)"
+    @click="!disabled && $emit('select', props.pack.id)"
   >
     <div
       :class="[

@@ -3,6 +3,7 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { useConsoleStore } from '../stores/consoleStore'
 import { useDownloadStore } from '../stores/downloadStore'
 import { useLaunchStore } from '../stores/launchStore'
+import { useLauncherStore } from '../stores/launcherStore'
 import { useErrorStore } from '../stores/errorStore'
 import { ConsoleLinePayload, DownloadProgressPayload, ErrorPayload, LaunchStatus, LaunchStatusPayload, LightyEvent } from '../types/lighty-events'
 import consola from 'consola'
@@ -10,6 +11,7 @@ import consola from 'consola'
 export function useLightyEvents() {
   const downloadStore = useDownloadStore()
   const launchStore = useLaunchStore()
+  const launcherStore = useLauncherStore()
   const consoleStore = useConsoleStore()
   const errorStore = useErrorStore()
 
@@ -32,6 +34,10 @@ export function useLightyEvents() {
 
           if (event.payload.status === LaunchStatus.Running) {
             downloadStore.complete(event.payload.instance_name)
+          }
+
+          if (event.payload.status === LaunchStatus.Exited || event.payload.status === LaunchStatus.Failed) {
+            launcherStore.launching = false
           }
         }
       )

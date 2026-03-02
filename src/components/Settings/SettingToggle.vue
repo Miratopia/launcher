@@ -6,6 +6,7 @@ defineProps<{
   title: string
   description: string
   modelValue: boolean
+  disabled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -24,10 +25,11 @@ const emit = defineEmits<{
         <p class="text-xs text-white/40 mt-0.5">{{ description }}</p>
       </div>
       <button
-        :class="modelValue ? 'toggle-track-on' : 'toggle-track-off'"
+        :disabled="disabled"
+        :class="[modelValue ? 'toggle-track-on' : 'toggle-track-off', disabled && 'opacity-30 cursor-not-allowed']"
         @click="emit('update:modelValue', !modelValue)"
       >
-        <div :class="['toggle-thumb', modelValue ? 'translate-x-5' : 'translate-x-0']" />
+        <div :class="['toggle-thumb', modelValue ? 'translate-x-4' : 'translate-x-0']" />
       </button>
     </div>
   </div>

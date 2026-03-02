@@ -10,7 +10,7 @@ export const useLaunchStore = defineStore('launch', {
     isRunning: (state) => {
       return (instanceName: string): boolean => {
         const status = state.currentStatus.get(instanceName)
-        return status?.status === LaunchStatus.Running
+        return status?.status === LaunchStatus.Running || status?.status === LaunchStatus.Launched
       }
     },
   },

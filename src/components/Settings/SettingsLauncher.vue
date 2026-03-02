@@ -1,23 +1,79 @@
 <script setup lang="ts">
-import { FolderOpen, Monitor, Rocket, ChevronRight, X, ToggleLeft, ToggleRight } from 'lucide-vue-next'
+import { ref, computed } from 'vue'
+import { FolderOpen, Trash2, RotateCcw, UserX, PackageX } from 'lucide-vue-next'
+import { useModpacksCommand } from '../../composables/useModpacksCommand'
+import { useLauncherMaintenanceCommand } from '../../composables/useLauncherMaintenanceCommand'
 import { useLauncherStore } from '../../stores/launcherStore'
-import type { Settings } from '../../types/settings'
+import { useAccountsStore } from '../../stores/accountsStore'
 
-const store = useLauncherStore()
+const { openLauncherFolder, openModpacksFolder } = useModpacksCommand()
+const { clearCache, resetAllSettings, clearAllAccounts, deleteAllModpacks } = useLauncherMaintenanceCommand()
+const launcherStore = useLauncherStore()
+const accountsStore = useAccountsStore()
 
-async function saveDisplaySettings() {
-  const settings: Partial<Settings> = {
-    fullScreen: store.fullscreen,
-    windowWidth: parseInt(store.resWidth) || 1920,
-    windowHeight: parseInt(store.resHeight) || 1080,
+type ConfirmAction = 'cache' | 'settings' | 'accounts' | 'modpacks' | null
+const confirmAction = ref<ConfirmAction>(null)
+const actionLoading = ref(false)
+
+const confirmConfig = computed(() => {
+  switch (confirmAction.value) {
+    case 'cache':
+      return {
+        title: 'Vider le cache',
+        message: 'La position et la taille de la fenêtre seront réinitialisées. Le launcher va redémarrer automatiquement.',
+        confirmLabel: 'Vider et redémarrer',
+        variant: 'warning' as const,
+      }
+    case 'settings':
+      return {
+        title: 'Réinitialiser les paramètres',
+        message: 'Tous les paramètres du launcher et les paramètres personnalisés de vos modpacks seront supprimés et remis aux valeurs par défaut.',
+        confirmLabel: 'Réinitialiser',
+        variant: 'danger' as const,
+      }
+    case 'accounts':
+      return {
+        title: 'Supprimer tous les comptes',
+        message: 'Tous les comptes connectés seront déconnectés et supprimés du launcher. Vous devrez vous reconnecter.',
+        confirmLabel: 'Supprimer les comptes',
+        variant: 'danger' as const,
+      }
+    case 'modpacks':
+      return {
+        title: 'Supprimer tous les modpacks',
+        message: 'Tous les fichiers des modpacks téléchargés seront supprimés du disque. Ils seront retéléchargés au prochain lancement.',
+        confirmLabel: 'Supprimer les modpacks',
+        variant: 'danger' as const,
+      }
+    default:
+      return { title: '', message: '', confirmLabel: '', variant: 'warning' as const }
   }
-  const current = store.modpackSettings ?? {}
-  await store.saveModpackSettings({ ...current, ...settings })
-}
+})
 
-function toggleFullscreen() {
-  store.fullscreen = !store.fullscreen
-  saveDisplaySettings()
+async function handleConfirm() {
+  actionLoading.value = true
+  try {
+    switch (confirmAction.value) {
+      case 'cache':
+        await clearCache()
+        break
+      case 'settings':
+        await resetAllSettings()
+        await launcherStore.loadModpackSettings()
+        break
+      case 'accounts':
+        await clearAllAccounts()
+        await accountsStore.fetchAccounts()
+        await accountsStore.fetchActiveAccount()
+        break
+      case 'modpacks':
+        await deleteAllModpacks()
+        break
+    }
+  } finally {
+    actionLoading.value = false
+    confirmAction.value = null
+  }
 }
 </script>
 
@@ -27,76 +83,116 @@ function toggleFullscreen() {
     <SettingsSettingRow
       :icon="FolderOpen"
       title="Dossier du launcher"
-      description="Ouvrir le dossier dans l'explorateur"
+      description="Ouvrir le dossier d'installation du launcher"
     >
       <template #action>
         <button
-          class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm text-white/80 hover:text-white transition-all"
+          :disabled="launcherStore.isGameActive"
+          class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm text-white/80 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:text-white/80"
+          @click="openLauncherFolder"
         >
           Ouvrir
         </button>
       </template>
     </SettingsSettingRow>
 
-    <!-- Résolution -->
+    <!-- Dossier modpacks -->
     <SettingsSettingRow
-      :icon="Monitor"
-      title="Résolution de l'écran"
-      description="Résolution appliquée au lancement"
+      :icon="FolderOpen"
+      title="Dossier des modpacks"
+      description="Ouvrir le dossier de données des modpacks"
     >
-      <template #content>
-        <div class="flex items-center gap-3 mt-3">
-          <input
-            v-model="store.resWidth"
-            type="text"
-            class="w-20 input-field"
-            @blur="saveDisplaySettings()"
-          />
-          <span class="text-white/30">&times;</span>
-          <input
-            v-model="store.resHeight"
-            type="text"
-            class="w-20 input-field"
-            @blur="saveDisplaySettings()"
-          />
-          <button
-            :class="[
-              'flex items-center gap-2 px-3 py-2 rounded-lg border transition-all',
-              store.fullscreen
-                ? 'bg-amber-500/20 border-amber-500/30 text-amber-400'
-                : 'bg-black/30 border-white/10 text-white/60 hover:text-white',
-            ]"
-            @click="toggleFullscreen()"
-          >
-            <component :is="store.fullscreen ? ToggleRight : ToggleLeft" :size="18" />
-            <span class="text-sm">Plein écran</span>
-          </button>
-        </div>
+      <template #action>
+        <button
+          :disabled="launcherStore.isGameActive"
+          class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm text-white/80 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:text-white/80"
+          @click="openModpacksFolder"
+        >
+          Ouvrir
+        </button>
       </template>
     </SettingsSettingRow>
 
-    <!-- Auto update -->
-    <SettingsSettingToggle
-      :icon="Rocket"
-      title="Mise à jour automatique"
-      description="Télécharger automatiquement les mises à jour"
-      v-model="store.autoUpdate"
-    />
+    <!-- Séparateur -->
+    <div class="border-t border-white/5" />
 
-    <!-- Console -->
-    <SettingsSettingToggle
-      :icon="ChevronRight"
-      title="Afficher la console"
-      description="Afficher les logs au lancement"
-      v-model="store.showConsole"
-    />
+    <!-- Vider le cache -->
+    <SettingsSettingRow
+      :icon="Trash2"
+      title="Vider le cache"
+      description="Réinitialise la position et la taille de la fenêtre"
+    >
+      <template #action>
+        <button
+          :disabled="launcherStore.isGameActive"
+          class="px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 rounded-lg text-sm text-amber-400 hover:text-amber-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-amber-500/10 disabled:hover:text-amber-400"
+          @click="confirmAction = 'cache'"
+        >
+          Vider
+        </button>
+      </template>
+    </SettingsSettingRow>
 
-    <!-- Fermer launcher -->
-    <SettingsSettingToggle
-      :icon="X"
-      title="Fermer le launcher"
-      description="Fermer le launcher au lancement du jeu"
-      v-model="store.closeLauncher"
+    <!-- Réinitialiser les paramètres -->
+    <SettingsSettingRow
+      :icon="RotateCcw"
+      title="Réinitialiser les paramètres"
+      description="Remet tous les paramètres du launcher et des modpacks par défaut"
+    >
+      <template #action>
+        <button
+          :disabled="launcherStore.isGameActive"
+          class="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg text-sm text-red-400 hover:text-red-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-red-500/10 disabled:hover:text-red-400"
+          @click="confirmAction = 'settings'"
+        >
+          Réinitialiser
+        </button>
+      </template>
+    </SettingsSettingRow>
+
+    <!-- Supprimer tous les comptes -->
+    <SettingsSettingRow
+      :icon="UserX"
+      title="Supprimer tous les comptes"
+      description="Déconnecte et supprime tous les comptes enregistrés"
+    >
+      <template #action>
+        <button
+          :disabled="launcherStore.isGameActive"
+          class="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg text-sm text-red-400 hover:text-red-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-red-500/10 disabled:hover:text-red-400"
+          @click="confirmAction = 'accounts'"
+        >
+          Supprimer
+        </button>
+      </template>
+    </SettingsSettingRow>
+
+    <!-- Supprimer tous les modpacks -->
+    <SettingsSettingRow
+      :icon="PackageX"
+      title="Supprimer tous les modpacks"
+      description="Supprime tous les fichiers de modpacks téléchargés"
+    >
+      <template #action>
+        <button
+          :disabled="launcherStore.isGameActive"
+          class="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg text-sm text-red-400 hover:text-red-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-red-500/10 disabled:hover:text-red-400"
+          @click="confirmAction = 'modpacks'"
+        >
+          Supprimer
+        </button>
+      </template>
+    </SettingsSettingRow>
+
+    <!-- Modale de confirmation -->
+    <SettingsConfirmModal
+      :show="confirmAction !== null"
+      :title="confirmConfig.title"
+      :message="confirmConfig.message"
+      :confirm-label="confirmConfig.confirmLabel"
+      :variant="confirmConfig.variant"
+      @confirm="handleConfirm"
+      @cancel="confirmAction = null"
     />
   </div>
 </template>

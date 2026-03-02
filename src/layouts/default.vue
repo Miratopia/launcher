@@ -1,3 +1,11 @@
+<script setup lang="ts">
+import { useLauncherStore } from '../stores/launcherStore'
+import { useAccountRemoveConfirm } from '../composables/useAccountRemoveConfirm'
+
+const store = useLauncherStore()
+const removeConfirm = useAccountRemoveConfirm()
+</script>
+
 <template>
   <div
     class="w-full min-h-screen flex flex-col overflow-hidden relative launcher-bg"
@@ -17,11 +25,15 @@
     <slot />
 
     <SettingsModal />
+
+    <SettingsConfirmModal
+      :show="removeConfirm.show.value"
+      title="Déconnecter le compte"
+      :message="`Voulez-vous vraiment déconnecter le compte ${removeConfirm.pendingAccount.value} ? Vous pourrez le reconnecter à tout moment.`"
+      confirm-label="Déconnecter"
+      variant="danger"
+      @confirm="removeConfirm.confirm"
+      @cancel="removeConfirm.cancel"
+    />
   </div>
 </template>
-
-<script setup lang="ts">
-import { useLauncherStore } from '../stores/launcherStore'
-
-const store = useLauncherStore()
-</script>

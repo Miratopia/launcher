@@ -13,6 +13,7 @@ pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         modpacks::start_modpack,
         modpacks::stop_modpack,
         modpacks::open_modpacks_folder,
+        modpacks::delete_all_modpacks,
         accounts::display_account,
         accounts::add_account,
         accounts::del_account,
@@ -20,8 +21,12 @@ pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         accounts::switch_active_account,
         accounts::get_active_account,
         accounts::display_active_account,
+        accounts::clear_all_accounts,
         settings::display_modpack_settings,
         settings::update_modpack_settings,
+        settings::reset_all_settings,
         utils::os_total_memory_info,
+        utils::open_launcher_folder,
+        utils::clear_cache,
     ]
 }

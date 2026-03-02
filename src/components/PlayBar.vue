@@ -14,7 +14,10 @@ const { stopModpack } = useModpacksCommand()
 
 const downloadProgress = computed(() => {
   if (!store.selectedPack) return null
-  return downloadStore.getStatusByInstance(store.selectedPack)
+  const packProgress = downloadStore.getStatusByInstance(store.selectedPack)
+  if (packProgress) return packProgress
+  if (store.launching) return downloadStore.getStatusByInstance('')
+  return null
 })
 
 const isRunning = computed(() => {
@@ -26,6 +29,18 @@ const launchStatus = computed(() => {
   if (!store.selectedPack) return null
   return launchStore.currentStatus.get(store.selectedPack) ?? null
 })
+
+const initPhase = computed(() => {
+  if (!store.launching) return null
+  for (const status of launchStore.currentStatus.values()) {
+    if (status.status === LaunchStatus.Initializing) return status
+  }
+  return null
+})
+
+const isInitializing = computed(() =>
+  store.launching && !downloadProgress.value && !launchStatus.value
+)
 
 const statusText = computed(() => {
   if (downloadProgress.value) {
@@ -43,7 +58,9 @@ const statusText = computed(() => {
       default: return ''
     }
   }
-  if (store.launching) return 'Vérification des fichiers...'
+  if (isInitializing.value) {
+    return initPhase.value?.phase ?? 'Vérification des fichiers...'
+  }
   return 'Prêt à jouer'
 })
 
@@ -76,7 +93,7 @@ async function handleStop() {
 
         <button
           v-if="isRunning"
-          class="px-6 py-3 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl font-semibold text-red-400 flex items-center gap-2 transition-all"
+          class="px-8 py-4 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl font-bold text-lg text-red-400 flex items-center gap-3 transition-all"
           @click="handleStop"
         >
           <Square :size="20" fill="currentColor" />
@@ -99,8 +116,15 @@ async function handleStop() {
         </button>
       </div>
 
+      <!-- Indeterminate progress bar during initialization -->
+      <div v-if="isInitializing" class="w-full">
+        <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
+          <div class="h-full w-1/3 bg-gradient-to-r from-transparent via-amber-500/60 to-transparent rounded-full animate-indeterminate" />
+        </div>
+      </div>
+
       <!-- Download progress bar -->
-      <div v-if="downloadProgress" class="w-full">
+      <div v-else-if="downloadProgress" class="w-full">
         <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
           <div
             class="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-300"

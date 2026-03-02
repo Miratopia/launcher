@@ -1,22 +1,23 @@
 <script setup lang="ts">
-import { Settings, Rocket, Monitor, Users, X } from 'lucide-vue-next'
+import { computed } from 'vue'
+import { Settings, Rocket, Package, Users, X } from 'lucide-vue-next'
 import { useLauncherStore } from '../../stores/launcherStore'
 
 const store = useLauncherStore()
 
-const tabs = [
-  { id: 'launcher' as const, icon: Rocket, label: 'Launcher' },
-  { id: 'modpack' as const, icon: Monitor, label: 'Miratopia SMP' },
-]
+const modpackTabs = computed(() =>
+  store.modpacks.map((pack) => ({
+    id: `modpack:${pack.id}`,
+    label: pack.name,
+  })),
+)
 
-const bottomTabs = [
-  { id: 'accounts' as const, icon: Users, label: 'Comptes' },
-]
-
-const settingsTitles: Record<string, string> = {
-  launcher: 'Launcher',
-  modpack: 'Miratopia SMP',
-  accounts: 'Comptes',
+function selectTab(tabId: string) {
+  store.settingsTab = tabId
+  if (tabId.startsWith('modpack:')) {
+    const modpackId = tabId.slice('modpack:'.length)
+    store.loadModpackSettings(modpackId)
+  }
 }
 </script>
 
@@ -54,26 +55,50 @@ const settingsTitles: Record<string, string> = {
                 <Settings :size="18" class="text-amber-400" />
                 <span class="font-semibold text-white">Paramètres</span>
               </div>
-              <div class="p-2 flex-1">
-                <button
-                  v-for="tab in tabs"
-                  :key="tab.id"
-                  :class="store.settingsTab === tab.id ? 'settings-tab-active' : 'settings-tab-inactive'"
-                  @click="store.settingsTab = tab.id"
-                >
-                  <component :is="tab.icon" :size="16" />
-                  <span class="text-sm font-medium">{{ tab.label }}</span>
-                </button>
+
+              <div class="p-2 flex-1 overflow-y-auto">
+                <!-- Général -->
+                <div class="mb-4">
+                  <span class="px-3 text-[11px] font-semibold uppercase tracking-wider text-white/30">
+                    Général
+                  </span>
+                  <div class="mt-1.5 space-y-1">
+                    <button
+                      :class="store.settingsTab === 'launcher' ? 'settings-tab-active' : 'settings-tab-inactive'"
+                      @click="selectTab('launcher')"
+                    >
+                      <Rocket :size="16" />
+                      <span class="text-sm font-medium">Launcher</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Modpacks -->
+                <div>
+                  <span class="px-3 text-[11px] font-semibold uppercase tracking-wider text-white/30">
+                    Modpacks
+                  </span>
+                  <div class="mt-1.5 space-y-1">
+                    <button
+                      v-for="tab in modpackTabs"
+                      :key="tab.id"
+                      :class="store.settingsTab === tab.id ? 'settings-tab-active' : 'settings-tab-inactive'"
+                      @click="selectTab(tab.id)"
+                    >
+                      <Package :size="16" />
+                      <span class="text-sm font-medium">{{ tab.label }}</span>
+                    </button>
+                  </div>
+                </div>
               </div>
+
               <div class="p-2 border-t border-white/5">
                 <button
-                  v-for="tab in bottomTabs"
-                  :key="tab.id"
-                  :class="store.settingsTab === tab.id ? 'settings-tab-active' : 'settings-tab-inactive'"
-                  @click="store.settingsTab = tab.id"
+                  :class="store.settingsTab === 'accounts' ? 'settings-tab-active' : 'settings-tab-inactive'"
+                  @click="selectTab('accounts')"
                 >
-                  <component :is="tab.icon" :size="16" />
-                  <span class="text-sm font-medium">{{ tab.label }}</span>
+                  <Users :size="16" />
+                  <span class="text-sm font-medium">Comptes</span>
                 </button>
               </div>
             </div>
@@ -82,7 +107,7 @@ const settingsTitles: Record<string, string> = {
             <div class="flex-1 flex flex-col">
               <div class="px-4 h-14 border-b border-white/5 flex items-center justify-between shrink-0">
                 <h2 class="text-lg font-semibold text-white">
-                  {{ settingsTitles[store.settingsTab] }}
+                  {{ store.settingsTitle }}
                 </h2>
                 <button
                   class="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-white"
@@ -94,7 +119,11 @@ const settingsTitles: Record<string, string> = {
 
               <div class="flex-1 overflow-y-auto p-5">
                 <SettingsLauncher v-if="store.settingsTab === 'launcher'" />
-                <SettingsModpack v-else-if="store.settingsTab === 'modpack'" />
+                <SettingsModpack
+                  v-else-if="store.activeSettingsModpackId"
+                  :key="store.activeSettingsModpackId"
+                  :modpack-id="store.activeSettingsModpackId"
+                />
                 <SettingsAccounts v-else-if="store.settingsTab === 'accounts'" />
               </div>
             </div>

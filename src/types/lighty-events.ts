@@ -13,6 +13,7 @@ export interface LaunchStatusPayload {
 }
 
 export enum LaunchStatus {
+  Initializing = "initializing",
   Running = "running",
   Launched = "launched",
   Exited = "exited",

@@ -2,9 +2,11 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { Minus, Maximize2, Square, X } from 'lucide-vue-next'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import { getVersion } from '@tauri-apps/api/app'
 
 const appWindow = getCurrentWindow()
 const isMaximized = ref(false)
+const appVersion = ref('')
 
 async function syncMaximizedState() {
   isMaximized.value = await appWindow.isMaximized()
@@ -24,6 +26,7 @@ async function close() {
 }
 
 onMounted(async () => {
+  appVersion.value = await getVersion()
   await syncMaximizedState()
 
   const unlisten = await appWindow.onResized(async () => {
@@ -45,7 +48,7 @@ onMounted(async () => {
     <div class="flex items-center gap-3" data-tauri-drag-region>
       <img src="~/assets/images/logo.svg" alt="Miratopia" class="w-8 h-8 rounded-lg" />
       <span class="text-white/50 text-sm font-medium" data-tauri-drag-region>Miratopia Launcher</span>
-      <span class="text-white/20 text-xs" data-tauri-drag-region>v0.1.10</span>
+      <span class="text-white/20 text-xs" data-tauri-drag-region>v{{ appVersion }}</span>
     </div>
     <div class="flex items-center gap-1">
       <button class="btn-window" @click="minimize">

@@ -40,10 +40,20 @@ export function useModpacksCommand() {
     }
   }
 
+  async function openLauncherFolder() {
+    try {
+      await invoke('open_launcher_folder')
+    } catch (error) {
+      console.error('Failed to open launcher folder:', error)
+      throw error
+    }
+  }
+
   return {
     listModpacks,
     startModpack,
     stopModpack,
     openModpacksFolder,
+    openLauncherFolder,
   }
 }

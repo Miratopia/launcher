@@ -3,12 +3,14 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { User, UserPlus, LogOut, RefreshCw } from 'lucide-vue-next'
 import { useAccountsStore } from '../../stores/accountsStore'
 import { useLauncherStore } from '../../stores/launcherStore'
+import { useAccountRemoveConfirm } from '../../composables/useAccountRemoveConfirm'
 
 const store = useAccountsStore()
 const launcherStore = useLauncherStore()
 
 const open = ref(false)
 const menuRef = ref<HTMLElement | null>(null)
+const { requestRemove } = useAccountRemoveConfirm()
 
 function toggle() {
   open.value = !open.value
@@ -29,10 +31,10 @@ function handleAddAccount() {
   launcherStore.openSettings('accounts')
 }
 
-async function handleLogout() {
+function handleLogout() {
   if (!store.activeAccount) return
   close()
-  await store.removeAccount(store.activeAccount.username)
+  requestRemove(store.activeAccount.username)
 }
 
 onMounted(() => document.addEventListener('mousedown', onClickOutside))
@@ -67,7 +69,7 @@ defineExpose({ close })
             <div>
               <p class="text-sm font-medium text-white">{{ store.activeAccount.username }}</p>
               <p class="text-xs text-white/40">
-                {{ store.activeAccount.type === 'microsoft' ? 'Compte Premium' : 'Compte Offline' }}
+                Compte Minecraft
               </p>
             </div>
           </template>
@@ -98,7 +100,8 @@ defineExpose({ close })
           </button>
           <button
             v-if="store.activeAccount"
-            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-500/10 transition-colors group"
+            :disabled="launcherStore.isGameActive"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-500/10 transition-colors group disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             @click="handleLogout"
           >
             <LogOut :size="16" class="text-white/40 group-hover:text-red-400" />

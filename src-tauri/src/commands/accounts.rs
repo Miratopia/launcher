@@ -486,6 +486,37 @@ pub async fn list_accounts(state: State<'_, VaultState>) -> Result<Vec<String>, 
     Ok(accounts)
 }
 
+/// Supprime tous les comptes du vault et réinitialise les métadonnées.
+#[tauri::command]
+pub async fn clear_all_accounts(state: State<'_, VaultState>) -> Result<(), String> {
+    let accounts = list_accounts(state.clone()).await?;
+
+    for account in &accounts {
+        if let Err(e) = del_account(state.clone(), account) {
+            tracing::warn!("Failed to delete account '{}': {}", account, e);
+        }
+    }
+
+    with_sh(
+        &state,
+        |sh: &tauri_plugin_stronghold::stronghold::Stronghold| {
+            let metadata_client = sh
+                .get_client(b"metadata/active_account")
+                .or_else(|_| sh.create_client(b"metadata/active_account"))
+                .map_err(|e| e.to_string())?;
+            let metadata_store = metadata_client.store();
+            let _ = metadata_store.delete(b"active_account");
+            sh.write_client(b"metadata/active_account")
+                .map_err(|e| e.to_string())?;
+            Ok(())
+        },
+    )?;
+
+    commit_snapshot(&state)?;
+    tracing::info!("All accounts cleared ({} removed)", accounts.len());
+    Ok(())
+}
+
 /// Login with an offline account
 ///
 /// # Arguments

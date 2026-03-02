@@ -99,6 +99,34 @@ pub fn open_modpacks_folder() -> Result<(), String> {
     Ok(())
 }
 
+/// Remove all modpacks from the data directory
+#[tauri::command]
+pub fn delete_all_modpacks() -> Result<(), String> {
+    let launcher_dir = AppState::get_project_dirs();
+    let data_path = launcher_dir.data_dir();
+
+    if !data_path.exists() {
+        tracing::info!("Modpacks data directory does not exist, nothing to delete");
+        return Ok(());
+    }
+
+    let entries = std::fs::read_dir(&data_path)
+        .map_err(|e| format!("Failed to read data directory: {}", e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+        if path.is_dir() {
+            std::fs::remove_dir_all(&path)
+                .map_err(|e| format!("Failed to delete '{}': {}", path.display(), e))?;
+            tracing::info!("Deleted modpack directory: {:?}", path);
+        }
+    }
+
+    tracing::info!("All modpacks deleted from {:?}", data_path);
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn list_modpacks(state: State<'_, VaultState>) -> Result<Vec<String>, String> {
     let profile_name = display_active_account(state.clone())

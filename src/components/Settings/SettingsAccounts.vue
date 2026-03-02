@@ -3,10 +3,15 @@ import { ref } from 'vue'
 import { Trash2, CheckCircle, Loader2, Globe, Wifi, XCircle } from 'lucide-vue-next'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { useAccountsStore } from '../../stores/accountsStore'
+import { useLauncherStore } from '../../stores/launcherStore'
+import { useAccountRemoveConfirm } from '../../composables/useAccountRemoveConfirm'
 
 const store = useAccountsStore()
+const launcherStore = useLauncherStore()
 const offlineNameInput = ref('')
 const showOfflineForm = ref(false)
+
+const { requestRemove } = useAccountRemoveConfirm()
 
 async function handleAddMicrosoft() {
   await store.addMicrosoftAccount()
@@ -18,10 +23,6 @@ async function handleAddOffline() {
   await store.addOfflineAccount(name)
   offlineNameInput.value = ''
   showOfflineForm.value = false
-}
-
-async function handleRemove(profileName: string) {
-  await store.removeAccount(profileName)
 }
 
 async function handleSwitch(profileName: string) {
@@ -46,8 +47,7 @@ async function handleSwitch(profileName: string) {
         <div class="flex-1">
           <h3 class="text-sm font-medium text-white">{{ store.activeAccount.username }}</h3>
           <p class="text-xs text-amber-400/80 mt-0.5">
-            Compte actif &bull;
-            {{ store.activeAccount.type === 'microsoft' ? 'Premium' : 'Offline' }}
+            Compte Minecraft &bull; Actif
           </p>
         </div>
         <div class="w-3 h-3 bg-emerald-400 rounded-full shadow-lg shadow-emerald-400/50" />
@@ -73,16 +73,18 @@ async function handleSwitch(profileName: string) {
         </div>
         <div class="flex items-center gap-2">
           <button
-            class="p-2 rounded-lg bg-white/5 hover:bg-amber-500/20 border border-white/10 hover:border-amber-500/30 text-white/60 hover:text-amber-400 transition-all"
+            :disabled="launcherStore.isGameActive"
+            class="p-2 rounded-lg bg-white/5 hover:bg-amber-500/20 border border-white/10 hover:border-amber-500/30 text-white/60 hover:text-amber-400 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:text-white/60"
             title="Activer ce compte"
             @click="handleSwitch(account)"
           >
             <CheckCircle :size="16" />
           </button>
           <button
-            class="p-2 rounded-lg bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 text-white/60 hover:text-red-400 transition-all"
+            :disabled="launcherStore.isGameActive"
+            class="p-2 rounded-lg bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 text-white/60 hover:text-red-400 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:text-white/60"
             title="Supprimer ce compte"
-            @click="handleRemove(account)"
+            @click="requestRemove(account)"
           >
             <Trash2 :size="16" />
           </button>
@@ -124,8 +126,8 @@ async function handleSwitch(profileName: string) {
 
     <!-- Ajouter compte Microsoft -->
     <button
-      class="w-full bg-white/5 hover:bg-white/10 rounded-xl p-4 border border-white/5 border-dashed hover:border-amber-500/30 transition-all group"
-      :disabled="store.addingAccount"
+      class="w-full bg-white/5 hover:bg-white/10 rounded-xl p-4 border border-white/5 border-dashed hover:border-amber-500/30 transition-all group disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:border-white/5"
+      :disabled="store.addingAccount || launcherStore.isGameActive"
       @click="handleAddMicrosoft"
     >
       <div class="flex items-center justify-center gap-3">
@@ -143,12 +145,13 @@ async function handleSwitch(profileName: string) {
           v-model="offlineNameInput"
           type="text"
           placeholder="Nom du profil"
-          class="flex-1 input-field"
+          :disabled="launcherStore.isGameActive"
+          class="flex-1 input-field disabled:opacity-30 disabled:cursor-not-allowed"
           @keyup.enter="handleAddOffline"
         />
         <button
-          class="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 rounded-lg text-sm text-amber-400 transition-all"
-          :disabled="!offlineNameInput.trim()"
+          class="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 rounded-lg text-sm text-amber-400 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-amber-500/20"
+          :disabled="!offlineNameInput.trim() || launcherStore.isGameActive"
           @click="handleAddOffline"
         >
           Ajouter
@@ -157,8 +160,8 @@ async function handleSwitch(profileName: string) {
     </div>
     <button
       v-else
-      class="w-full bg-white/5 hover:bg-white/10 rounded-xl p-4 border border-white/5 border-dashed hover:border-white/20 transition-all group"
-      :disabled="store.addingAccount"
+      class="w-full bg-white/5 hover:bg-white/10 rounded-xl p-4 border border-white/5 border-dashed hover:border-white/20 transition-all group disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:border-white/5"
+      :disabled="store.addingAccount || launcherStore.isGameActive"
       @click="showOfflineForm = true"
     >
       <div class="flex items-center justify-center gap-3">
@@ -168,5 +171,6 @@ async function handleSwitch(profileName: string) {
         </span>
       </div>
     </button>
+
   </div>
 </template>
