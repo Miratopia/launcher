@@ -11,7 +11,7 @@ use lighty_launcher::{
 use tracing_subscriber::prelude::*;
 
 const MAX_RETRIES: u32 = 3;
-const INITIAL_DELAY_MS: u32 = 200;
+const INITIAL_DELAY_MS: u64 = 200;
 const MAX_CONCURRENT_DOWNLOADS: usize = 16;
 
 #[tokio::main]
