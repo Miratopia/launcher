@@ -58,6 +58,7 @@ import { useAccountsCommand } from "../composables/useAccountsCommand";
 import { useModpacksCommand } from "../composables/useModpacksCommand";
 import { useSettingsCommand } from "../composables/useSettingsCommand";
 import { JavaDistribution } from "../types/settings";
+import { useUtilsCommand } from "../composables/useUtilsCommand";
 
 const {
   listAccounts,
@@ -68,7 +69,8 @@ const {
   displayActiveAccount,
 } = useAccountsCommand();
 const { startModpack, listModpacks, openModpacksFolder } = useModpacksCommand();
-const { displayModpackSettings, updateModpackSettings, osTotalMemoryInfo } = useSettingsCommand();
+const { displayModpackSettings, updateModpackSettings } = useSettingsCommand();
+const { osTotalMemoryInfo } = useUtilsCommand();
 
 const activeAccount = await displayActiveAccount();
 console.log("active account", activeAccount);
