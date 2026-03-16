@@ -30,8 +30,6 @@ export const useLauncherStore = defineStore('launcher', {
     showSettings: false,
     settingsTab: 'launcher' as string,
 
-    wallpaper: '',
-
     fullscreen: false,
     resWidth: '1920',
     resHeight: '1080',
