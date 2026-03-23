@@ -1,7 +1,21 @@
 <script setup lang="ts">
-import { onMounted, useTemplateRef } from 'vue'
+import { ref, watch, onMounted, useTemplateRef } from 'vue'
+import { useLauncherStore } from '../stores/launcherStore'
+import { splashPhrases } from '../data/splashPhrases'
 
+const launcherStore = useLauncherStore()
 const videoRef = useTemplateRef<HTMLVideoElement>('bg-video')
+
+function randomSplash(exclude?: string): string {
+  const pool = exclude ? splashPhrases.filter(p => p !== exclude) : splashPhrases
+  return pool[Math.floor(Math.random() * pool.length)]
+}
+
+const currentSplash = ref(randomSplash())
+
+watch(() => launcherStore.selectedPack, () => {
+  currentSplash.value = randomSplash(currentSplash.value)
+})
 
 const playlist = [
   '/videos/video-test.mp4',
@@ -50,9 +64,43 @@ onMounted(() => {
         alt="Miratopia"
         class="h-20 object-contain mx-auto"
       />
-      <p class="text-amber-300/30 text-sm mt-3 tracking-widest uppercase">
-        Serveur Minecraft Communautaire
+      <p
+        class="absolute -right-28 -top-3 text-primary-300 font-bold minecraft-text splash-text max-w-[380px] text-center leading-tight"
+        style="font-family: 'Minecraft', 'MinecraftRegular', monospace;"
+      >
+        {{ currentSplash }}
       </p>
     </div>
   </div>
 </template>
+
+<style scoped>
+@font-face {
+  font-family: 'Minecraft';
+  src: url('/fonts/Minecraft.otf') format('opentype');
+  font-display: swap;
+}
+
+@keyframes splash {
+  0%, 100% { transform: rotate(14deg) scale(1); }
+  50% { transform: rotate(14deg) scale(1.15); }
+}
+
+.splash-text {
+  transform-origin: center;
+  animation: splash 1.5s ease-in-out infinite;
+}
+
+.minecraft-text {
+  text-shadow:
+    2px 2px 0 #000,
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000,
+    2px 0 0 #000,
+    0 2px 0 #000,
+    -1px 0 0 #000,
+    0 -1px 0 #000;
+}
+</style>

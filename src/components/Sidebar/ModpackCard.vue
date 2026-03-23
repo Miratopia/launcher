@@ -39,7 +39,6 @@ console.log('pack', props.pack);
     </div>
     <div class="flex-1 min-w-0">
       <p class="text-sm font-medium text-white/90 truncate">{{ pack.name }}</p>
-      <p class="text-xs text-white/30">{{ pack.version }} &bull; {{ pack.mods }} mods</p>
     </div>
     <div v-if="selected" class="status-dot-selected" />
   </div>
