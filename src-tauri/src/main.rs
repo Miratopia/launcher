@@ -53,18 +53,22 @@ fn init_tracing() -> tracing_appender::non_blocking::WorkerGuard {
 
     let (non_blocking, guard) = tracing_appender::non_blocking(log_file);
 
+    let file_layer = tracing_subscriber::fmt::layer()
+        .with_writer(non_blocking)
+        .with_ansi(false);
+
+    #[cfg(debug_assertions)]
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
                 .with_writer(std::io::stdout)
                 .with_ansi(true),
         )
-        .with(
-            tracing_subscriber::fmt::layer()
-                .with_writer(non_blocking)
-                .with_ansi(false),
-        )
+        .with(file_layer)
         .init();
+
+    #[cfg(not(debug_assertions))]
+    tracing_subscriber::registry().with(file_layer).init();
 
     guard
 }
