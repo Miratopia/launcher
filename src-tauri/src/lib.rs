@@ -50,6 +50,11 @@ pub fn run(_app_state: AppState) -> anyhow::Result<()> {
         });
     println!("Tauri build OK");
 
+    if let Some(window) = app.get_webview_window("main") {
+        const ICON: tauri::image::Image<'_> = tauri::include_image!("icons/32x32.png");
+        let _ = window.set_icon(ICON);
+    }
+
     let app_handle = app.handle().clone();
     events::spawn_event_listener(app_handle, event_bus.clone());
 
