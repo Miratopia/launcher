@@ -16,10 +16,6 @@ const MAX_CONCURRENT_DOWNLOADS: usize = 16;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let _tracing_guard = init_tracing();
-
-    tracing::info!("🏁 Démarrage du launcher");
-
     const QUALIFIER: &str = "fr";
     const ORGANIZATION: &str = "fr.miratopia.minecraft-launcher";
     const APPLICATION: &str = "";
@@ -29,6 +25,9 @@ async fn main() -> anyhow::Result<()> {
         ORGANIZATION.to_string(),
         APPLICATION.to_string(),
     )?;
+
+    let _tracing_guard = init_tracing(&app_state);
+    tracing::info!("🏁 Démarrage du launcher");
 
     init_downloader_config(DownloaderConfig {
         max_concurrent_downloads: MAX_CONCURRENT_DOWNLOADS,
@@ -40,8 +39,12 @@ async fn main() -> anyhow::Result<()> {
     miratopia_launcher_lib::run(app_state)
 }
 
-fn init_tracing() -> tracing_appender::non_blocking::WorkerGuard {
-    let log_dir = std::env::temp_dir().join("miratopia-launcher");
+fn init_tracing(_app_state: &AppState) -> tracing_appender::non_blocking::WorkerGuard {
+    let roaming_app_dir = AppState::get_project_dirs()
+        .data_local_dir()
+        .to_path_buf();
+
+    let log_dir = roaming_app_dir.join("logs");
     let _ = std::fs::create_dir_all(&log_dir);
     let log_path = log_dir.join("launcher.log");
     let log_file = std::fs::OpenOptions::new()
