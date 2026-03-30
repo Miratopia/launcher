@@ -41,7 +41,7 @@ const confirmConfig = computed(() => {
     case 'modpacks':
       return {
         title: 'Supprimer tous les modpacks',
-        message: 'Tous les fichiers des modpacks téléchargés seront supprimés du disque. Ils seront retéléchargés au prochain lancement.',
+        message: 'Les fichiers des modpacks seront supprimés (mods, configs, etc.). Vos sauvegardes, options, shaderpacks et resource packs seront conservés.',
         confirmLabel: 'Supprimer les modpacks',
         variant: 'danger' as const,
       }

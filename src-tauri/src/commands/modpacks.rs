@@ -99,9 +99,29 @@ pub fn open_modpacks_folder() -> Result<(), String> {
     Ok(())
 }
 
-/// Remove all modpacks from the data directory
+/// Remove the contents of each modpack directory, preserving entries listed
+/// in `config.ignored_files` from the remote `launcher.json`.
 #[tauri::command]
-pub fn delete_all_modpacks() -> Result<(), String> {
+pub async fn delete_all_modpacks() -> Result<(), String> {
+    let url = "https://raw.githubusercontent.com/tacxtv/miratopia-launcher/refs/heads/config/launcher.json";
+    let json: Value = reqwest::get(url)
+        .await
+        .map_err(|e| format!("Failed to download launcher.json: {}", e))?
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse launcher.json: {}", e))?;
+
+    let config = json.get("config").ok_or("No config found")?;
+    let ignored_files: Vec<String> = config
+        .get("ignored_files")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+
     let launcher_dir = AppState::get_project_dirs();
     let data_path = launcher_dir.data_dir();
 
@@ -117,13 +137,42 @@ pub fn delete_all_modpacks() -> Result<(), String> {
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
         if path.is_dir() {
-            std::fs::remove_dir_all(&path)
-                .map_err(|e| format!("Failed to delete '{}': {}", path.display(), e))?;
-            tracing::info!("Deleted modpack directory: {:?}", path);
+            clean_modpack_dir(&path, &ignored_files)?;
+            tracing::info!("Cleaned modpack directory: {:?}", path);
         }
     }
 
-    tracing::info!("All modpacks deleted from {:?}", data_path);
+    tracing::info!("All modpacks cleaned from {:?}", data_path);
+    Ok(())
+}
+
+fn clean_modpack_dir(
+    modpack_path: &std::path::Path,
+    ignored_files: &[String],
+) -> Result<(), String> {
+    let entries = std::fs::read_dir(modpack_path)
+        .map_err(|e| format!("Failed to read '{}': {}", modpack_path.display(), e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let name = entry.file_name();
+        let name_str = name.to_string_lossy();
+
+        if ignored_files.iter().any(|f| f == name_str.as_ref()) {
+            tracing::info!("Preserving: {:?}", entry.path());
+            continue;
+        }
+
+        let path = entry.path();
+        if path.is_dir() {
+            std::fs::remove_dir_all(&path)
+                .map_err(|e| format!("Failed to delete '{}': {}", path.display(), e))?;
+        } else {
+            std::fs::remove_file(&path)
+                .map_err(|e| format!("Failed to delete '{}': {}", path.display(), e))?;
+        }
+    }
+
     Ok(())
 }
 
