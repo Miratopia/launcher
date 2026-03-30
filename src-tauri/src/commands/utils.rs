@@ -1,3 +1,4 @@
+use lighty_launcher::core::AppState;
 use sysinfo::{System, SystemExt};
 use tauri::{command, AppHandle, Manager};
 
@@ -42,7 +43,7 @@ pub fn open_launcher_folder() -> Result<(), String> {
     Ok(())
 }
 
-/// Remove the window state cache file (window position/size)
+/// Remove the window state cache file (window position/size) and downloaded Java runtimes.
 /// A launcher restart is necessary for the change to take effect.
 #[command]
 pub fn clear_cache(app: AppHandle) -> Result<(), String> {
@@ -60,6 +61,13 @@ pub fn clear_cache(app: AppHandle) -> Result<(), String> {
                 .map_err(|e| format!("Failed to delete {}: {}", name, e))?;
             tracing::info!("Cleared window state cache: {:?}", path);
         }
+    }
+
+    let jre_dir = AppState::get_project_dirs().config_dir().join("jre");
+    if jre_dir.exists() {
+        std::fs::remove_dir_all(&jre_dir)
+            .map_err(|e| format!("Failed to delete Java runtimes: {}", e))?;
+        tracing::info!("Cleared Java runtimes: {:?}", jre_dir);
     }
 
     tracing::info!("Restarting launcher after cache clear");

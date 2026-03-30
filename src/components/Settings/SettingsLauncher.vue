@@ -20,7 +20,7 @@ const confirmConfig = computed(() => {
     case 'cache':
       return {
         title: 'Vider le cache',
-        message: 'La position et la taille de la fenêtre seront réinitialisées. Le launcher va redémarrer automatiquement.',
+        message: 'La position et la taille de la fenêtre seront réinitialisées et les runtimes Java téléchargés seront supprimés. Le launcher va redémarrer automatiquement.',
         confirmLabel: 'Vider et redémarrer',
         variant: 'warning' as const,
       }
@@ -118,7 +118,7 @@ async function handleConfirm() {
     <SettingsSettingRow
       :icon="Trash2"
       title="Vider le cache"
-      description="Réinitialise la position et la taille de la fenêtre"
+      description="Réinitialise la fenêtre et supprime les runtimes Java"
     >
       <template #action>
         <button
