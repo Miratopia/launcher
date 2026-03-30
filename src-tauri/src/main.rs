@@ -8,22 +8,24 @@ use lighty_launcher::{
     core::AppState,
     launch::{init_downloader_config, DownloaderConfig},
 };
-use tracing_subscriber::prelude::*;
+use tracing_subscriber::{prelude::*, EnvFilter};
 
 const MAX_RETRIES: u32 = 3;
 const INITIAL_DELAY_MS: u64 = 200;
 const MAX_CONCURRENT_DOWNLOADS: usize = 16;
 
+const LOG_FOLDER_NAME: &str = "logs";
+const LOG_FILE_NAME: &str = "launcher.log";
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     const QUALIFIER: &str = "fr";
-    const ORGANIZATION: &str = "fr.miratopia.minecraft-launcher";
-    const APPLICATION: &str = "";
+    const PRODUCT_NAME: &str = env!("TAURI_PRODUCT_NAME");
 
     let app_state = AppState::new(
         QUALIFIER.to_string(),
-        ORGANIZATION.to_string(),
-        APPLICATION.to_string(),
+        PRODUCT_NAME.to_string(),
+        "".to_string(),
     )?;
 
     let _tracing_guard = init_tracing(&app_state);
@@ -44,9 +46,9 @@ fn init_tracing(_app_state: &AppState) -> tracing_appender::non_blocking::Worker
         .data_local_dir()
         .to_path_buf();
 
-    let log_dir = roaming_app_dir.join("logs");
+    let log_dir = roaming_app_dir.join(LOG_FOLDER_NAME);
     let _ = std::fs::create_dir_all(&log_dir);
-    let log_path = log_dir.join("launcher.log");
+    let log_path = log_dir.join(LOG_FILE_NAME);
     let log_file = std::fs::OpenOptions::new()
         .create(true)
         .write(true)
@@ -60,8 +62,17 @@ fn init_tracing(_app_state: &AppState) -> tracing_appender::non_blocking::Worker
         .with_writer(non_blocking)
         .with_ansi(false);
 
+    let default_filter = if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "info"
+    };
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new(default_filter));
+
     #[cfg(debug_assertions)]
     tracing_subscriber::registry()
+        .with(env_filter)
         .with(
             tracing_subscriber::fmt::layer()
                 .with_writer(std::io::stdout)
@@ -71,7 +82,10 @@ fn init_tracing(_app_state: &AppState) -> tracing_appender::non_blocking::Worker
         .init();
 
     #[cfg(not(debug_assertions))]
-    tracing_subscriber::registry().with(file_layer).init();
+    tracing_subscriber::registry()
+        .with(env_filter)
+        .with(file_layer)
+        .init();
 
     guard
 }

@@ -9,6 +9,15 @@ use tauri_plugin_store::StoreBuilder;
 
 const SETTINGS_STORE: &str = "settings.json";
 
+const MIN_MEMORY_DEFAULT: u32 = 1024;
+const MAX_MEMORY_DEFAULT: u32 = 4096;
+const FULL_SCREEN_DEFAULT: bool = false;
+const WINDOW_WIDTH_DEFAULT: u32 = 1280;
+const WINDOW_HEIGHT_DEFAULT: u32 = 720;
+const JAVA_DISTRIBUTION_DEFAULT: JavaDistribution = JavaDistribution::Temurin;
+
+const SETTINGS_KEY: &str = "settings";
+
 /// Paramètres d’un modpack.
 ///
 /// ## Pourquoi des `Option<T>` ?
@@ -45,12 +54,12 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            java_distribution: Some(JavaDistribution::Temurin),
-            min_memory: Some(1024),
-            max_memory: Some(4096),
-            full_screen: Some(false),
-            window_width: Some(1280),
-            window_height: Some(720),
+            java_distribution: Some(JAVA_DISTRIBUTION_DEFAULT),
+            min_memory: Some(MIN_MEMORY_DEFAULT),
+            max_memory: Some(MAX_MEMORY_DEFAULT),
+            full_screen: Some(FULL_SCREEN_DEFAULT),
+            window_width: Some(WINDOW_WIDTH_DEFAULT),
+            window_height: Some(WINDOW_HEIGHT_DEFAULT),
         }
     }
 }
@@ -79,7 +88,7 @@ pub fn get_modpack_settings(app: &AppHandle, modpack_name: &str) -> Settings {
     let store = StoreBuilder::new(app, std::path::Path::new(SETTINGS_STORE))
         .build()
         .expect("Erreur lors de la création du store");
-    let modpacks_value = store.get("modpacks");
+    let modpacks_value = store.get(SETTINGS_KEY);
     let settings: Settings = match modpacks_value {
         Some(val) => {
             let map: HashMap<String, serde_json::Value> =
@@ -119,14 +128,14 @@ pub fn update_modpack_settings(
         .build()
         .map_err(|e| e.to_string())?;
     // Charger l'existant
-    let mut modpacks_map: HashMap<String, serde_json::Value> = match store.get("modpacks") {
+    let mut modpacks_map: HashMap<String, serde_json::Value> = match store.get(SETTINGS_KEY) {
         Some(val) => serde_json::from_value(val.clone()).unwrap_or_default(),
         None => HashMap::new(),
     };
     let value = serde_json::to_value(&new_settings).map_err(|e| e.to_string())?;
     modpacks_map.insert(modpack_name.clone(), value);
     store.set(
-        "modpacks",
+        SETTINGS_KEY,
         serde_json::to_value(&modpacks_map).map_err(|e| e.to_string())?,
     );
     store.save().map_err(|e| e.to_string())?;

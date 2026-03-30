@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Miratopia Launcher",
+  "productName": "Miratopia",
+  "identifier": "Miratopia",
   "version": "0.2.11",
-  "identifier": "fr.miratopia.minecraft-launcher",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:3000",

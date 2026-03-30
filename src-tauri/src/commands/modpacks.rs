@@ -10,6 +10,13 @@ use serde_json::Value;
 use std::sync::Mutex;
 use tauri::State;
 
+#[cfg(target_os = "windows")]
+const FOLDER_OPENER: &str = "explorer";
+#[cfg(target_os = "macos")]
+const FOLDER_OPENER: &str = "open";
+#[cfg(target_os = "linux")]
+const FOLDER_OPENER: &str = "xdg-open";
+
 static MC_INSTANCE: Lazy<Mutex<Option<VersionBuilder<'static, Loader>>>> =
     Lazy::new(|| Mutex::new(None));
 
@@ -77,21 +84,21 @@ pub fn open_modpacks_folder() -> Result<(), String> {
 
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("explorer")
+        std::process::Command::new(FOLDER_OPENER)
             .arg(&data_path)
             .spawn()
             .map_err(|e| format!("Failed to open data folder: {}", e))?;
     }
     #[cfg(target_os = "macos")]
     {
-        std::process::Command::new("open")
+        std::process::Command::new(FOLDER_OPENER)
             .arg(&data_path)
             .spawn()
             .map_err(|e| format!("Failed to open data folder: {}", e))?;
     }
     #[cfg(target_os = "linux")]
     {
-        std::process::Command::new("xdg-open")
+        std::process::Command::new(FOLDER_OPENER)
             .arg(&data_path)
             .spawn()
             .map_err(|e| format!("Failed to open data folder: {}", e))?;

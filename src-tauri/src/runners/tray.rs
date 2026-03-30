@@ -4,9 +4,14 @@ use tauri::{
     Manager,
 };
 
+const MAIN_WINDOW_LABEL: &str = "main";
+
+const QUIT_ITEM_ID: &str = "quit";
+const CONSOLE_ITEM_ID: &str = "console";
+
 pub fn init(app: &tauri::App) -> tauri::Result<()> {
-    let quit_i = MenuItem::with_id(app, "quit", "Quitter", true, None::<&str>)?;
-    let console_i = MenuItem::with_id(app, "console", "Console", true, None::<&str>)?;
+    let quit_i = MenuItem::with_id(app, QUIT_ITEM_ID, "Quitter", true, None::<&str>)?;
+    let console_i = MenuItem::with_id(app, CONSOLE_ITEM_ID, "Console", true, None::<&str>)?;
 
     let menu = Menu::with_items(app, &[&console_i, &quit_i])?;
 
@@ -20,7 +25,7 @@ pub fn init(app: &tauri::App) -> tauri::Result<()> {
             } => {
                 let app = tray.app_handle();
 
-                if let Some(window) = app.get_webview_window("main") {
+                if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
                     if !window.is_visible().unwrap_or(false) {
                         let _ = window.unminimize();
                         let _ = window.show();
@@ -33,13 +38,13 @@ pub fn init(app: &tauri::App) -> tauri::Result<()> {
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| match event.id.as_ref() {
-            "quit" => {
+            QUIT_ITEM_ID => {
                 tracing::info!("🛑 Stopping application !");
                 app.exit(0);
             }
-            "console" => {
+            CONSOLE_ITEM_ID => {
                 tracing::info!("🔄 Opening console window");
-                if let Some(window) = app.get_webview_window("main") {
+                if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
                     let _ = window.show();
                     let _ = window.set_focus().ok();
                 }

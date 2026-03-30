@@ -4,6 +4,9 @@ use tauri::AppHandle;
 use tauri::Manager;
 use tauri_plugin_stronghold::{kdf::KeyDerivation, stronghold::Stronghold};
 
+const VAULT_FILE_NAME: &str = "vault.hold";
+const SALT_FILE_NAME: &str = "salt.txt";
+
 pub struct VaultState {
     // On garde une instance en mémoire (ouverte) pour éviter de recharger à chaque commande
     pub inner: Mutex<Option<Stronghold>>,
@@ -59,12 +62,12 @@ pub fn init_vault_if_needed(
             Err(e) => {
                 tracing::warn!("Failed to load existing snapshot: {:?}", e);
                 tracing::warn!(
-                    "Tentative de suppression du vault.hold corrompu: {:?}",
+                    "Tentative de suppression du {} corrompu: {:?}", VAULT_FILE_NAME,
                     v_path
                 );
                 match std::fs::remove_file(&v_path) {
                     Ok(_) => {
-                        tracing::info!("vault.hold corrompu supprimé automatiquement");
+                        tracing::info!("{} corrompu supprimé automatiquement", VAULT_FILE_NAME);
                         // On tente de recréer un nouveau Stronghold
                         match Stronghold::new(v_path.clone(), key.clone()) {
                             Ok(new_sh) => {
@@ -74,7 +77,7 @@ pub fn init_vault_if_needed(
                                 *state.password.lock().unwrap() = None;
                                 sh = new_sh;
                                 tracing::info!(
-                                    "Nouveau vault.hold créé après suppression du corrompu"
+                                    "Nouveau {} créé après suppression du corrompu", VAULT_FILE_NAME,
                                 );
                                 // Réenregistrer le contexte après reset
                                 *state.app_handle.lock().unwrap() = Some(Arc::new(app.clone()));
@@ -174,12 +177,12 @@ fn vault_path(app: &AppHandle) -> std::path::PathBuf {
     app.path()
         .app_data_dir()
         .expect("app_data_dir unavailable")
-        .join("vault.hold")
+        .join(VAULT_FILE_NAME)
 }
 
 fn salt_path(app: &AppHandle) -> std::path::PathBuf {
     app.path()
         .app_local_data_dir()
         .expect("app_local_data_dir unavailable")
-        .join("salt.txt")
+        .join(SALT_FILE_NAME)
 }

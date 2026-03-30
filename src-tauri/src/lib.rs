@@ -7,9 +7,12 @@ mod utils;
 use lighty_launcher::{core::AppState, event::EventBus};
 use tauri::Manager;
 
+const EVENT_BUS_SIZE: usize = 1000;
+const MAIN_WINDOW_LABEL: &str = "main";
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run(_app_state: AppState) -> anyhow::Result<()> {
-    let event_bus = EventBus::new(1000);
+    let event_bus = EventBus::new(EVENT_BUS_SIZE);
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -21,7 +24,7 @@ pub fn run(_app_state: AppState) -> anyhow::Result<()> {
     {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             let _ = app
-                .get_webview_window("main")
+                .get_webview_window(MAIN_WINDOW_LABEL)
                 .expect("no main window")
                 .set_focus();
         }));
@@ -50,7 +53,7 @@ pub fn run(_app_state: AppState) -> anyhow::Result<()> {
         });
     println!("Tauri build OK");
 
-    if let Some(window) = app.get_webview_window("main") {
+    if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
         const ICON: tauri::image::Image<'_> = tauri::include_image!("icons/32x32.png");
         let _ = window.set_icon(ICON);
     }
@@ -72,7 +75,7 @@ pub fn run(_app_state: AppState) -> anyhow::Result<()> {
     app.run(move |_app_handle, event| {
         match &event {
             RunEvent::WindowEvent { label, event, .. } => {
-                if label == "main" {
+                if label == MAIN_WINDOW_LABEL {
                     if let WindowEvent::CloseRequested { api: _, .. } = event {
                         //     // let running = is_mc_running.lock().unwrap();
                         //     // if *running {

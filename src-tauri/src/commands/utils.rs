@@ -2,6 +2,18 @@ use lighty_launcher::core::AppState;
 use sysinfo::{System, SystemExt};
 use tauri::{command, AppHandle, Manager};
 
+const JRE_DIR_NAME: &str = "jre";
+
+const WINDOW_STATE_CACHE_FILE_NAME: &str = ".window-state";
+const WINDOW_STATE_CACHE_FILE_NAME_JSON: &str = ".window-state.json";
+
+#[cfg(target_os = "windows")]
+const FOLDER_OPENER: &str = "explorer";
+#[cfg(target_os = "macos")]
+const FOLDER_OPENER: &str = "open";
+#[cfg(target_os = "linux")]
+const FOLDER_OPENER: &str = "xdg-open";
+
 #[command]
 pub fn os_total_memory_info() -> u64 {
     let mut sys = System::new();
@@ -21,21 +33,21 @@ pub fn open_launcher_folder() -> Result<(), String> {
 
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("explorer")
+        std::process::Command::new(FOLDER_OPENER)
             .arg(folder)
             .spawn()
             .map_err(|e| format!("Failed to open launcher folder: {}", e))?;
     }
     #[cfg(target_os = "macos")]
     {
-        std::process::Command::new("open")
+        std::process::Command::new(FOLDER_OPENER)
             .arg(folder)
             .spawn()
             .map_err(|e| format!("Failed to open launcher folder: {}", e))?;
     }
     #[cfg(target_os = "linux")]
     {
-        std::process::Command::new("xdg-open")
+        std::process::Command::new(FOLDER_OPENER)
             .arg(folder)
             .spawn()
             .map_err(|e| format!("Failed to open launcher folder: {}", e))?;
@@ -52,7 +64,7 @@ pub fn clear_cache(app: AppHandle) -> Result<(), String> {
         .app_data_dir()
         .map_err(|e| format!("Failed to resolve app data dir: {}", e))?;
 
-    let candidates = [".window-state", ".window-state.json"];
+    let candidates = [WINDOW_STATE_CACHE_FILE_NAME, WINDOW_STATE_CACHE_FILE_NAME_JSON];
 
     for name in &candidates {
         let path = data_dir.join(name);
@@ -63,7 +75,7 @@ pub fn clear_cache(app: AppHandle) -> Result<(), String> {
         }
     }
 
-    let jre_dir = AppState::get_project_dirs().config_dir().join("jre");
+    let jre_dir = AppState::get_project_dirs().config_dir().join(JRE_DIR_NAME);
     if jre_dir.exists() {
         std::fs::remove_dir_all(&jre_dir)
             .map_err(|e| format!("Failed to delete Java runtimes: {}", e))?;

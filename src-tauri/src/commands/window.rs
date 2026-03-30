@@ -1,7 +1,14 @@
 use tauri::{AppHandle, Manager, Window};
 
+const CONSOLE_WINDOW_TITLE: &str = "Console - Miratopia Launcher";
+const CONSOLE_WINDOW_WIDTH: f64 = 1200.0;
+const CONSOLE_WINDOW_HEIGHT: f64 = 700.0;
+
+const CONSOLE_LABEL: &str = "console";
+const CONSOLE_WINDOW_URL: &str = "/console";
+
 pub fn create_console_window(app_handle: AppHandle) -> Result<(), String> {
-    if let Some(window) = app_handle.get_webview_window("console") {
+    if let Some(window) = app_handle.get_webview_window(CONSOLE_LABEL) {
         let _ = window.show();
         let _ = window.set_focus().ok();
         return Ok(());
@@ -9,11 +16,11 @@ pub fn create_console_window(app_handle: AppHandle) -> Result<(), String> {
 
     let _window = tauri::WebviewWindowBuilder::new(
         &app_handle,
-        "console",
-        tauri::WebviewUrl::App("/console".into()),
+        CONSOLE_LABEL,
+        tauri::WebviewUrl::App(CONSOLE_WINDOW_URL.into()),
     )
-    .title("Console - Miratopia Launcher")
-    .inner_size(1200.0, 700.0)
+    .title(CONSOLE_WINDOW_TITLE)
+    .inner_size(CONSOLE_WINDOW_WIDTH, CONSOLE_WINDOW_HEIGHT)
     .center()
     .build()
     .map_err(|e| e.to_string())?;

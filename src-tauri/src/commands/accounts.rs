@@ -17,6 +17,22 @@ pub struct UserProfilePartial {
     pub uuid: String,
 }
 
+const MICROSOFT_CLIENT_ID: &str = "7347d7b7-f14d-40c4-af19-f82204a7851e";
+
+const USERNAME_KEY: &str = "username";
+const UUID_KEY: &str = "uuid";
+const ACCESS_TOKEN_KEY: &str = "access_token";
+const REFRESH_TOKEN_KEY: &str = "refresh_token";
+const EXPIRES_IN_KEY: &str = "expires_in";
+const EMITED_AT_KEY: &str = "emited_at";
+const PROVIDER_KEY: &str = "provider";
+
+const ACTIVE_ACCOUNT_KEY: &str = "active_account";
+const ACCOUNTS_KEY: &str = "accounts";
+
+const ACTIVE_ACCOUNT_CLIENT_PATH: &str = "metadata/active_account";
+const ACCOUNTS_CLIENT_PATH: &str = "metadata/accounts";
+
 #[tauri::command]
 pub async fn display_active_account(
     state: State<'_, VaultState>,
@@ -25,8 +41,8 @@ pub async fn display_active_account(
         &state,
         |sh: &tauri_plugin_stronghold::stronghold::Stronghold| {
             let metadata_client = sh
-                .get_client(b"metadata/active_account")
-                .or_else(|_| sh.create_client(b"metadata/active_account"))
+                .get_client(ACTIVE_ACCOUNT_CLIENT_PATH.as_bytes())
+                .or_else(|_| sh.create_client(ACTIVE_ACCOUNT_CLIENT_PATH.as_bytes()))
                 .map_err(|e| e.to_string())?;
             let metadata_store = metadata_client.store();
             let name = metadata_store
@@ -60,8 +76,8 @@ pub fn switch_active_account(
         |sh: &tauri_plugin_stronghold::stronghold::Stronghold| {
             // On stocke le nom du compte actif dans le client metadata/active_account
             let metadata_client = sh
-                .get_client(b"metadata/active_account")
-                .or_else(|_| sh.create_client(b"metadata/active_account"))
+                .get_client(ACTIVE_ACCOUNT_CLIENT_PATH.as_bytes())
+                .or_else(|_| sh.create_client(ACTIVE_ACCOUNT_CLIENT_PATH.as_bytes()))
                 .map_err(|e| e.to_string())?;
             let metadata_store = metadata_client.store();
             metadata_store
@@ -72,7 +88,7 @@ pub fn switch_active_account(
                 )
                 .map_err(|e| e.to_string())?;
             // Commit le client
-            sh.write_client(b"metadata/active_account")
+            sh.write_client(ACTIVE_ACCOUNT_CLIENT_PATH.as_bytes())
                 .map_err(|e| e.to_string())?;
             Ok(())
         },
@@ -96,11 +112,11 @@ pub async fn display_account(
                 .or_else(|_| sh.get_client(client_path.as_bytes()))
                 .map_err(|e| e.to_string())?;
             let store = client.store();
-            let username = match store.get(b"username").map_err(|e| e.to_string())? {
+            let username = match store.get(USERNAME_KEY.as_bytes()).map_err(|e| e.to_string())? {
                 Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
                 None => return Ok(None),
             };
-            let uuid = match store.get(b"uuid").map_err(|e| e.to_string())? {
+            let uuid = match store.get(UUID_KEY.as_bytes()).map_err(|e| e.to_string())? {
                 Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
                 None => return Ok(None),
             };
@@ -124,8 +140,8 @@ pub async fn get_active_account(
         &state,
         |sh: &tauri_plugin_stronghold::stronghold::Stronghold| {
             let metadata_client = sh
-                .get_client(b"metadata/active_account")
-                .or_else(|_| sh.create_client(b"metadata/active_account"))
+                .get_client(ACTIVE_ACCOUNT_CLIENT_PATH.as_bytes())
+                .or_else(|_| sh.create_client(ACTIVE_ACCOUNT_CLIENT_PATH.as_bytes()))
                 .map_err(|e| e.to_string())?;
             let metadata_store = metadata_client.store();
             let name = metadata_store
@@ -169,37 +185,37 @@ pub async fn get_account(
                 .or_else(|_| sh.get_client(client_path.as_bytes()))
                 .map_err(|e| e.to_string())?;
             let store = client.store();
-            let username = match store.get(b"username").map_err(|e| e.to_string())? {
+            let username = match store.get(USERNAME_KEY.as_bytes()).map_err(|e| e.to_string())? {
                 Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
                 None => return Ok(None),
             };
-            let uuid = match store.get(b"uuid").map_err(|e| e.to_string())? {
+            let uuid = match store.get(UUID_KEY.as_bytes()).map_err(|e| e.to_string())? {
                 Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
                 None => return Ok(None),
             };
-            let access_token = match store.get(b"access_token").map_err(|e| e.to_string())? {
+            let access_token = match store.get(ACCESS_TOKEN_KEY.as_bytes()).map_err(|e| e.to_string())? {
                 Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
                 None => return Ok(None),
             };
-            let refresh_token = match store.get(b"refresh_token").map_err(|e| e.to_string())? {
+            let refresh_token = match store.get(REFRESH_TOKEN_KEY.as_bytes()).map_err(|e| e.to_string())? {
                 Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
                 None => return Ok(None),
             };
-            let expires_in = match store.get(b"expires_in").map_err(|e| e.to_string())? {
+            let expires_in = match store.get(EXPIRES_IN_KEY.as_bytes()).map_err(|e| e.to_string())? {
                 Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
                 None => return Ok(None),
             };
-            let emited_at = match store.get(b"emited_at").map_err(|e| e.to_string())? {
+            let emited_at = match store.get(EMITED_AT_KEY.as_bytes()).map_err(|e| e.to_string())? {
                 Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
                 None => return Ok(None),
             };
-            let provider_str = match store.get(b"provider").map_err(|e| e.to_string())? {
+            let provider_str = match store.get(PROVIDER_KEY.as_bytes()).map_err(|e| e.to_string())? {
                 Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
                 None => "unknown".to_string(),
             };
             let provider = match provider_str.as_str() {
                 "microsoft" => AuthProvider::Microsoft {
-                    client_id: "7347d7b7-f14d-40c4-af19-f82204a7851e".to_string(),
+                    client_id: MICROSOFT_CLIENT_ID.to_string(),
                 },
                 "offline" => AuthProvider::Offline,
                 _ => {
@@ -295,21 +311,21 @@ pub async fn add_account(
             let store = client.store();
             store
                 .insert(
-                    "username".as_bytes().to_vec(),
+                    USERNAME_KEY.as_bytes().to_vec(),
                     profile.username.as_bytes().to_vec(),
                     None,
                 )
                 .map_err(|e| e.to_string())?;
             store
                 .insert(
-                    "uuid".as_bytes().to_vec(),
+                    UUID_KEY.as_bytes().to_vec(),
                     profile.uuid.as_bytes().to_vec(),
                     None,
                 )
                 .map_err(|e| e.to_string())?;
             store
                 .insert(
-                    "access_token".as_bytes().to_vec(),
+                    ACCESS_TOKEN_KEY.as_bytes().to_vec(),
                     profile
                         .access_token
                         .as_deref()
@@ -321,7 +337,7 @@ pub async fn add_account(
                 .map_err(|e| e.to_string())?;
             store
                 .insert(
-                    "refresh_token".as_bytes().to_vec(),
+                    REFRESH_TOKEN_KEY.as_bytes().to_vec(),
                     profile
                         .refresh_token
                         .as_deref()
@@ -333,14 +349,14 @@ pub async fn add_account(
                 .map_err(|e| e.to_string())?;
             store
                 .insert(
-                    "expires_in".as_bytes().to_vec(),
+                    EXPIRES_IN_KEY.as_bytes().to_vec(),
                     profile.expires_in.to_string().as_bytes().to_vec(),
                     None,
                 )
                 .map_err(|e| e.to_string())?;
             store
                 .insert(
-                    "emited_at".as_bytes().to_vec(),
+                    EMITED_AT_KEY.as_bytes().to_vec(),
                     profile
                         .emited_at
                         .map(|d| d.to_string())
@@ -357,19 +373,19 @@ pub async fn add_account(
             };
             store
                 .insert(
-                    "provider".as_bytes().to_vec(),
+                    PROVIDER_KEY.as_bytes().to_vec(),
                     provider_str.as_bytes().to_vec(),
                     None,
                 )
                 .map_err(|e| e.to_string())?;
 
             let metadata_client = sh
-                .get_client(b"metadata/accounts")
-                .or_else(|_| sh.create_client(b"metadata/accounts"))
+                .get_client(ACCOUNTS_CLIENT_PATH.as_bytes())
+                .or_else(|_| sh.create_client(ACCOUNTS_CLIENT_PATH.as_bytes()))
                 .map_err(|e| e.to_string())?;
             let metadata_store = metadata_client.store();
             let mut accounts: Vec<String> =
-                match metadata_store.get(b"accounts").map_err(|e| e.to_string())? {
+                match metadata_store.get(ACCOUNTS_KEY.as_bytes()).map_err(|e| e.to_string())? {
                     Some(bytes) => serde_json::from_slice(&bytes).unwrap_or_default(),
                     None => Vec::new(),
                 };
@@ -379,7 +395,7 @@ pub async fn add_account(
             tracing::info!("Saving accounts list: {:?}", accounts);
             metadata_store
                 .insert(
-                    b"accounts".to_vec(),
+                    ACCOUNTS_KEY.as_bytes().to_vec(),
                     serde_json::to_vec(&accounts).map_err(|e| e.to_string())?,
                     None,
                 )
@@ -389,7 +405,7 @@ pub async fn add_account(
             tracing::info!("Writing client to snapshot: {}", client_path);
             sh.write_client(client_path.as_bytes())
                 .map_err(|e| e.to_string())?;
-            sh.write_client(b"metadata/accounts")
+            sh.write_client(ACCOUNTS_CLIENT_PATH.as_bytes())
                 .map_err(|e| e.to_string())?;
 
             Ok(())
@@ -412,33 +428,37 @@ pub fn del_account(state: State<'_, VaultState>, profile_name: &str) -> Result<(
             let client_path = format!("minecraft/{}", profile_name);
             if let Ok(client) = sh.get_client(client_path.as_bytes()) {
                 let store = client.store();
-                let _ = store.delete(b"username");
-                let _ = store.delete(b"uuid");
-                let _ = store.delete(b"access_token");
+                let _ = store.delete(USERNAME_KEY.as_bytes());
+                let _ = store.delete(UUID_KEY.as_bytes());
+                let _ = store.delete(ACCESS_TOKEN_KEY.as_bytes());
+                let _ = store.delete(REFRESH_TOKEN_KEY.as_bytes());
+                let _ = store.delete(EXPIRES_IN_KEY.as_bytes());
+                let _ = store.delete(EMITED_AT_KEY.as_bytes());
+                let _ = store.delete(PROVIDER_KEY.as_bytes());
             }
 
             // Mettre à jour la liste des comptes dans le metadata
             let metadata_client = sh
-                .get_client(b"metadata/accounts")
-                .or_else(|_| sh.create_client(b"metadata/accounts"))
+                .get_client(ACCOUNTS_CLIENT_PATH.as_bytes())
+                .or_else(|_| sh.create_client(ACCOUNTS_CLIENT_PATH.as_bytes()))
                 .map_err(|e| e.to_string())?;
             let metadata_store = metadata_client.store();
             let mut accounts: Vec<String> =
-                match metadata_store.get(b"accounts").map_err(|e| e.to_string())? {
+                match metadata_store.get(ACCOUNTS_KEY.as_bytes()).map_err(|e| e.to_string())? {
                     Some(bytes) => serde_json::from_slice(&bytes).unwrap_or_default(),
                     None => Vec::new(),
                 };
             accounts.retain(|acc| acc != profile_name);
             metadata_store
                 .insert(
-                    b"accounts".to_vec(),
+                    ACCOUNTS_KEY.as_bytes().to_vec(),
                     serde_json::to_vec(&accounts).map_err(|e| e.to_string())?,
                     None,
                 )
                 .map_err(|e| e.to_string())?;
 
             // Commit uniquement le metadata/accounts (ne pas écrire le client supprimé)
-            sh.write_client(b"metadata/accounts")
+            sh.write_client(ACCOUNTS_CLIENT_PATH.as_bytes())
                 .map_err(|e| e.to_string())?;
             Ok(())
         },
@@ -460,19 +480,19 @@ pub async fn list_accounts(state: State<'_, VaultState>) -> Result<Vec<String>, 
 
     // Try to load the metadata client from snapshot first
     let metadata_client = sh
-        .load_client(b"metadata/accounts")
+        .load_client(ACCOUNTS_CLIENT_PATH.as_bytes())
         .or_else(|_| {
             tracing::info!("Metadata client not in snapshot, using get_client");
-            sh.get_client(b"metadata/accounts")
+            sh.get_client(ACCOUNTS_CLIENT_PATH.as_bytes())
         })
         .or_else(|_| {
             tracing::info!("Creating new metadata client");
-            sh.create_client(b"metadata/accounts")
+            sh.create_client(ACCOUNTS_CLIENT_PATH.as_bytes())
         })
         .map_err(|e| e.to_string())?;
 
     let metadata_store = metadata_client.store();
-    let accounts = match metadata_store.get(b"accounts").map_err(|e| e.to_string())? {
+    let accounts = match metadata_store.get(ACCOUNTS_KEY.as_bytes()).map_err(|e| e.to_string())? {
         Some(bytes) => {
             let accs: Vec<String> = serde_json::from_slice(&bytes).unwrap_or_default();
             tracing::info!("Found {} accounts: {:?}", accs.len(), accs);
@@ -501,12 +521,12 @@ pub async fn clear_all_accounts(state: State<'_, VaultState>) -> Result<(), Stri
         &state,
         |sh: &tauri_plugin_stronghold::stronghold::Stronghold| {
             let metadata_client = sh
-                .get_client(b"metadata/active_account")
-                .or_else(|_| sh.create_client(b"metadata/active_account"))
+                .get_client(ACTIVE_ACCOUNT_CLIENT_PATH.as_bytes())
+                .or_else(|_| sh.create_client(ACTIVE_ACCOUNT_CLIENT_PATH.as_bytes()))
                 .map_err(|e| e.to_string())?;
             let metadata_store = metadata_client.store();
-            let _ = metadata_store.delete(b"active_account");
-            sh.write_client(b"metadata/active_account")
+            let _ = metadata_store.delete(ACTIVE_ACCOUNT_KEY.as_bytes());
+            sh.write_client(ACTIVE_ACCOUNT_CLIENT_PATH.as_bytes())
                 .map_err(|e| e.to_string())?;
             Ok(())
         },
@@ -549,7 +569,7 @@ async fn login_with_microsoft_app(
     app_handle: AppHandle,
     event_bus: State<'_, EventBus>,
 ) -> Result<UserProfile, String> {
-    let mut auth = MicrosoftAuth::new("7347d7b7-f14d-40c4-af19-f82204a7851e");
+    let mut auth = MicrosoftAuth::new(MICROSOFT_CLIENT_ID);
     auth.set_poll_interval(Duration::from_secs(5));
     auth.set_timeout(Duration::from_secs(60));
     auth.set_device_code_callback(move |code, url| {
