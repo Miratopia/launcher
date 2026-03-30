@@ -87,8 +87,7 @@ async function handleConfirm() {
     >
       <template #action>
         <button
-          :disabled="launcherStore.isGameActive"
-          class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm text-white/80 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:text-white/80"
+          class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm text-white/80 hover:text-white transition-all"
           @click="openLauncherFolder"
         >
           Ouvrir
@@ -104,8 +103,7 @@ async function handleConfirm() {
     >
       <template #action>
         <button
-          :disabled="launcherStore.isGameActive"
-          class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm text-white/80 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:text-white/80"
+          class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm text-white/80 hover:text-white transition-all"
           @click="openModpacksFolder"
         >
           Ouvrir
