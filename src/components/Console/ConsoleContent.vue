@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { Terminal } from 'lucide-vue-next'
-import { StdStream } from '../types/lighty-events'
-import type { ConsoleLinePayload } from '../types/lighty-events'
+import { StdStream } from '~/types/lighty-events'
+import type { ConsoleLinePayload } from '~/types/lighty-events'
 
 const BATCH_CHAR_LIMIT = 50_000
 const VISIBLE_WINDOW = 5

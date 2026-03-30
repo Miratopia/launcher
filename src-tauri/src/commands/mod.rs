@@ -1,6 +1,7 @@
 use tauri::ipc::Invoke;
 
 pub mod accounts;
+pub mod logs;
 pub mod modpacks;
 pub mod settings;
 pub mod utils;
@@ -28,5 +29,6 @@ pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         utils::os_total_memory_info,
         utils::open_launcher_folder,
         utils::clear_cache,
+        logs::read_log_file,
     ]
 }

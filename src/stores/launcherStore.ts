@@ -99,6 +99,7 @@ export const useLauncherStore = defineStore('launcher', {
   actions: {
     async selectPack(id: string) {
       this.selectedPack = id
+      localStorage.setItem('selectedPack', id)
       await this.loadModpackSettings(id)
     },
 
