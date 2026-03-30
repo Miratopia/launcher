@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Monitor } from 'lucide-vue-next'
-import type { Modpack } from '../../stores/launcherStore'
+import type { Modpack } from '~/stores/launcherStore'
 
 const props = defineProps<{
   pack: Modpack

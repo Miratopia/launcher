@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { useAccountsCommand } from '../composables/useAccountsCommand'
+import { useAccountsCommand } from '~/composables/useAccountsCommand'
 import { useLauncherStore } from './launcherStore'
 
 export interface Account {

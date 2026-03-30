@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Play, Square } from 'lucide-vue-next'
-import { useLauncherStore } from '../stores/launcherStore'
-import { useDownloadStore } from '../stores/downloadStore'
-import { useLaunchStore } from '../stores/launchStore'
-import { useModpacksCommand } from '../composables/useModpacksCommand'
-import { LaunchStatus } from '../types/lighty-events'
+import { useLauncherStore } from '~/stores/launcherStore'
+import { useDownloadStore } from '~/stores/downloadStore'
+import { useLaunchStore } from '~/stores/launchStore'
+import { useModpacksCommand } from '~/composables/useModpacksCommand'
+import { LaunchStatus } from '~/types/lighty-events'
 
 const store = useLauncherStore()
 const downloadStore = useDownloadStore()

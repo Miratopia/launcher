@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useLauncherStore } from '../stores/launcherStore'
-import { useAccountRemoveConfirm } from '../composables/useAccountRemoveConfirm'
+import { useLauncherStore } from '~/stores/launcherStore'
+import { useAccountRemoveConfirm } from '~/composables/useAccountRemoveConfirm'
 
 const store = useLauncherStore()
 const removeConfirm = useAccountRemoveConfirm()

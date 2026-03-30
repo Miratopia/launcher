@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia'
-import { useModpacksCommand } from '../composables/useModpacksCommand'
-import { useSettingsCommand } from '../composables/useSettingsCommand'
+import { useModpacksCommand } from '~/composables/useModpacksCommand'
+import { useSettingsCommand } from '~/composables/useSettingsCommand'
 import { useAccountsStore } from './accountsStore'
 import { useLaunchStore } from './launchStore'
 import { useDownloadStore } from './downloadStore'
-import { LaunchStatus } from '../types/lighty-events'
-import type { Settings } from '../types/settings'
+import { LaunchStatus } from '~/types/lighty-events'
+import type { Settings } from '~/types/settings'
 import consola from 'consola'
 
 export interface Modpack {

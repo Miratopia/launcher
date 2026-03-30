@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { User, UserPlus, LogOut, RefreshCw } from 'lucide-vue-next'
-import { useAccountsStore } from '../../stores/accountsStore'
-import { useLauncherStore } from '../../stores/launcherStore'
-import { useAccountRemoveConfirm } from '../../composables/useAccountRemoveConfirm'
+import { useAccountsStore } from '~/stores/accountsStore'
+import { useLauncherStore } from '~/stores/launcherStore'
+import { useAccountRemoveConfirm } from '~/composables/useAccountRemoveConfirm'
 
 const store = useAccountsStore()
 const launcherStore = useLauncherStore()

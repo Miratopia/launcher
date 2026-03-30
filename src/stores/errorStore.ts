@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ErrorPayload } from '../types/lighty-events'
+import { ErrorPayload } from '~/types/lighty-events'
 
 export const useErrorStore = defineStore('error', {
   state: () => ({

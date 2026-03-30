@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Announcement } from '../../stores/launcherStore'
+import type { Announcement } from '~/stores/launcherStore'
 
 defineProps<{
   announcement: Announcement

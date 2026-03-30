@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { FolderOpen, Trash2, RotateCcw, UserX, PackageX } from 'lucide-vue-next'
-import { useModpacksCommand } from '../../composables/useModpacksCommand'
-import { useLauncherMaintenanceCommand } from '../../composables/useLauncherMaintenanceCommand'
-import { useLauncherStore } from '../../stores/launcherStore'
-import { useAccountsStore } from '../../stores/accountsStore'
+import { useModpacksCommand } from '~/composables/useModpacksCommand'
+import { useLauncherMaintenanceCommand } from '~/composables/useLauncherMaintenanceCommand'
+import { useLauncherStore } from '~/stores/launcherStore'
+import { useAccountsStore } from '~/stores/accountsStore'
 
 const { openLauncherFolder, openModpacksFolder } = useModpacksCommand()
 const { clearCache, resetAllSettings, clearAllAccounts, deleteAllModpacks } = useLauncherMaintenanceCommand()

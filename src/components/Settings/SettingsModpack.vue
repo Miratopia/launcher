@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { Cpu, Monitor, ToggleLeft, ToggleRight, ChevronRight, ChevronDown, Loader2 } from 'lucide-vue-next'
-import { useLauncherStore } from '../../stores/launcherStore'
-import { useSettingsCommand } from '../../composables/useSettingsCommand'
-import type { Settings, JavaDistributionListItem } from '../../types/settings'
+import { useLauncherStore } from '~/stores/launcherStore'
+import { useSettingsCommand } from '~/composables/useSettingsCommand'
+import type { Settings, JavaDistributionListItem } from '~/types/settings'
 
 const props = defineProps<{
   modpackId: string

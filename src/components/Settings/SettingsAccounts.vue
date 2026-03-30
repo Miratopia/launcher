@@ -2,9 +2,9 @@
 import { ref } from 'vue'
 import { Trash2, CheckCircle, Loader2, Globe, Wifi, XCircle } from 'lucide-vue-next'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { useAccountsStore } from '../../stores/accountsStore'
-import { useLauncherStore } from '../../stores/launcherStore'
-import { useAccountRemoveConfirm } from '../../composables/useAccountRemoveConfirm'
+import { useAccountsStore } from '~/stores/accountsStore'
+import { useLauncherStore } from '~/stores/launcherStore'
+import { useAccountRemoveConfirm } from '~/composables/useAccountRemoveConfirm'
 
 const store = useAccountsStore()
 const launcherStore = useLauncherStore()

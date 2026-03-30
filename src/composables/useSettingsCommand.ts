@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import { GetSettingsRequest, JavaDistribution, JavaDistributionListItem, Settings, UpdateSettingsRequest } from '../types/settings'
+import { GetSettingsRequest, JavaDistribution, JavaDistributionListItem, Settings, UpdateSettingsRequest } from '~/types/settings'
 import consola from 'consola'
 
 /**

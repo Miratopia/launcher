@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { LaunchStatus, LaunchStatusPayload } from '../types/lighty-events'
+import { LaunchStatus, LaunchStatusPayload } from '~/types/lighty-events'
 
 export const useLaunchStore = defineStore('launch', {
   state: () => ({

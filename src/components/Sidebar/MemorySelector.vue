@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Cpu, Minus, Plus } from 'lucide-vue-next'
-import { useLauncherStore } from '../../stores/launcherStore'
+import { useLauncherStore } from '~/stores/launcherStore'
 
 const store = useLauncherStore()
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, useTemplateRef } from 'vue'
-import { useLauncherStore } from '../stores/launcherStore'
-import { splashPhrases } from '../data/splashPhrases'
+import { useLauncherStore } from '~/stores/launcherStore'
+import { splashPhrases } from '~/data/splashPhrases'
 
 const launcherStore = useLauncherStore()
 const videoRef = useTemplateRef<HTMLVideoElement>('bg-video')

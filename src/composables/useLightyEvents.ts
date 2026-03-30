@@ -1,11 +1,11 @@
 import { onMounted, onUnmounted } from 'vue'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import { useConsoleStore } from '../stores/consoleStore'
-import { useDownloadStore } from '../stores/downloadStore'
-import { useLaunchStore } from '../stores/launchStore'
-import { useLauncherStore } from '../stores/launcherStore'
-import { useErrorStore } from '../stores/errorStore'
-import { ConsoleLinePayload, DownloadProgressPayload, ErrorPayload, LaunchStatus, LaunchStatusPayload, LightyEvent, StdStream } from '../types/lighty-events'
+import { useConsoleStore } from '~/stores/consoleStore'
+import { useDownloadStore } from '~/stores/downloadStore'
+import { useLaunchStore } from '~/stores/launchStore'
+import { useLauncherStore } from '~/stores/launcherStore'
+import { useErrorStore } from '~/stores/errorStore'
+import { ConsoleLinePayload, DownloadProgressPayload, ErrorPayload, LaunchStatus, LaunchStatusPayload, LightyEvent, StdStream } from '~/types/lighty-events'
 import consola from 'consola'
 
 function nowSecs(): number {

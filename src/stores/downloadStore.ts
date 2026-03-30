@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { DownloadProgressPayload } from '../types/lighty-events'
+import { DownloadProgressPayload } from '~/types/lighty-events'
 
 export const useDownloadStore = defineStore('download', {
   state: () => ({

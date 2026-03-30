@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { useAccountsStore } from '../stores/accountsStore'
+import { useAccountsStore } from '~/stores/accountsStore'
 
 const show = ref(false)
 const pendingAccount = ref<string | null>(null)

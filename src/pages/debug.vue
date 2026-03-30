@@ -51,14 +51,14 @@
 </template>
 
 <script lang="ts" setup>
-import { useConsoleStore } from "../stores/consoleStore";
-import { useDownloadStore } from "../stores/downloadStore";
+import { useConsoleStore } from "~/stores/consoleStore";
+import { useDownloadStore } from "~/stores/downloadStore";
 import { computed } from "vue";
-import { useAccountsCommand } from "../composables/useAccountsCommand";
-import { useModpacksCommand } from "../composables/useModpacksCommand";
-import { useSettingsCommand } from "../composables/useSettingsCommand";
-import { JavaDistribution } from "../types/settings";
-import { useUtilsCommand } from "../composables/useUtilsCommand";
+import { useAccountsCommand } from "~/composables/useAccountsCommand";
+import { useModpacksCommand } from "~/composables/useModpacksCommand";
+import { useSettingsCommand } from "~/composables/useSettingsCommand";
+import { JavaDistribution } from "~/types/settings";
+import { useUtilsCommand } from "~/composables/useUtilsCommand";
 
 const {
   listAccounts,

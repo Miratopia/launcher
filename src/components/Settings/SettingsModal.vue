@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Settings, Rocket, Package, Users, X } from 'lucide-vue-next'
-import { useLauncherStore } from '../../stores/launcherStore'
+import { useLauncherStore } from '~/stores/launcherStore'
 
 const store = useLauncherStore()
 
