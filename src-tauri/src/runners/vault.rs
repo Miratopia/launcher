@@ -1,7 +1,7 @@
 use crate::utils::vault::{init_vault_if_needed, VaultState};
+use crate::utils::vault_password::get_or_create_vault_password;
 use tauri::Manager;
 
-const VAULT_PASSWORD: &str = "dev-vault-password";
 const VAULT_FILE_NAME: &str = "vault.hold";
 const SALT_FILE_NAME: &str = "salt.txt";
 
@@ -23,7 +23,14 @@ pub fn setup(app: &tauri::App) -> tauri::Result<()> {
         .expect("app_data_dir unavailable")
         .join(VAULT_FILE_NAME);
 
-    match init_vault_if_needed(&app.handle(), &vault_state, VAULT_PASSWORD) {
+    let vault_password = get_or_create_vault_password(app.handle())
+        .unwrap_or_else(|e| panic!("mot de passe vault indisponible: {e}"));
+
+    match init_vault_if_needed(
+        &app.handle(),
+        &vault_state,
+        vault_password.as_str(),
+    ) {
         Ok(_) => {}
         Err(err) => {
             tracing::error!(%err, "vault init failed (1st try)");
@@ -32,7 +39,11 @@ pub fn setup(app: &tauri::App) -> tauri::Result<()> {
                 match std::fs::remove_file(&vault_path) {
                     Ok(_) => {
                         tracing::warn!("{} corrompu supprimé au démarrage, tentative de réinitialisation", VAULT_FILE_NAME);
-                        match init_vault_if_needed(&app.handle(), &vault_state, VAULT_PASSWORD) {
+                        match init_vault_if_needed(
+                            &app.handle(),
+                            &vault_state,
+                            vault_password.as_str(),
+                        ) {
                             Ok(_) => {
                                 tracing::info!(
                                     "Vault réparé avec succès après suppression au démarrage"
