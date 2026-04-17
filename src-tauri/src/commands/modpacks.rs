@@ -20,6 +20,20 @@ const FOLDER_OPENER: &str = "xdg-open";
 static MC_INSTANCE: Lazy<Mutex<Option<VersionBuilder<'static, Loader>>>> =
     Lazy::new(|| Mutex::new(None));
 
+fn normalize_loader_version(loader: &Loader, version: &str, minecraft_version: &str) -> String {
+    // Certains anciens modpacks stockent NeoForge comme "<mc_version>-<loader_version>".
+    // Le backend lighty reconstruit déjà la partie MC, ce qui crée un doublon
+    // ("1.20.1-1.20.1-47.1.79"). On retire donc ce préfixe pour NeoForge.
+    if matches!(loader, Loader::NeoForge) {
+        let prefix = format!("{minecraft_version}-");
+        if let Some(stripped) = version.strip_prefix(&prefix) {
+            return stripped.to_string();
+        }
+    }
+
+    version.to_string()
+}
+
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone)]
 struct MinecraftModpackInfo {
@@ -330,14 +344,20 @@ pub async fn start_modpack(
 
     println!("Launching game with modpack: {:?}", modpack);
 
-    let mut instance = VersionBuilder::new(
-        &modpack.id,
-        loader_type,
+    let normalized_loader_version = normalize_loader_version(
+        &loader_type,
         modpack
             .modloader_info
             .get(0)
             .map(|m| m.version.as_str())
             .expect("Modloader version is required"),
+        modpack.minecraft_info.version.as_str(),
+    );
+
+    let mut instance = VersionBuilder::new(
+        &modpack.id,
+        loader_type,
+        normalized_loader_version.as_str(),
         modpack.minecraft_info.version.as_str(),
         launcher_dir,
     );
