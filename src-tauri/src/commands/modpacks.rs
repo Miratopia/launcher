@@ -41,8 +41,10 @@ struct LoaderModpackInfo {
 struct FileModpackInfo {
     url: String,
     path: String,
-    hash: String,
-    size: u64,
+    #[serde(default)]
+    hash: Option<String>,
+    #[serde(default)]
+    size: Option<u64>,
 }
 
 #[allow(dead_code)]
@@ -343,12 +345,18 @@ pub async fn start_modpack(
     let mut mods = Vec::new();
     for file in &modpack.files_info {
         if file.path.contains("mods/") {
+            if file.hash.is_none() {
+                tracing::warn!(
+                    "Missing hash for mod file '{}'; continuing without sha1 verification",
+                    file.path
+                );
+            }
             mods.push(Mods {
                 name: file.path.clone(),
                 path: Some(file.path.clone().replace("mods/", "")),
                 url: Some(file.url.clone()),
-                sha1: Some(file.hash.clone()),
-                size: Some(file.size),
+                sha1: file.hash.clone(),
+                size: file.size,
             });
         }
     }
