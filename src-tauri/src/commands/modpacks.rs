@@ -20,6 +20,20 @@ const FOLDER_OPENER: &str = "xdg-open";
 static MC_INSTANCE: Lazy<Mutex<Option<VersionBuilder<'static, Loader>>>> =
     Lazy::new(|| Mutex::new(None));
 
+fn extract_sha1_mismatch_path(error: &str) -> Option<String> {
+    const MARKER: &str = "SHA1 mismatch for downloaded file: ";
+    let start = error.find(MARKER)? + MARKER.len();
+    let tail = &error[start..];
+    let end = tail.find('"').unwrap_or(tail.len());
+    let path = tail[..end].trim();
+
+    if path.is_empty() {
+        None
+    } else {
+        Some(path.to_string())
+    }
+}
+
 fn normalize_loader_version(loader: &Loader, version: &str, minecraft_version: &str) -> String {
     // Certains anciens modpacks stockent NeoForge comme "<mc_version>-<loader_version>".
     // Le backend lighty reconstruit déjà la partie MC, ce qui crée un doublon
@@ -397,25 +411,63 @@ pub async fn start_modpack(
     //     profile.refresh_token,
     // );
 
-    instance
+    let java_distribution = settings
+        .java_distribution
+        .unwrap_or(JavaDistribution::Temurin);
+    let max_memory = settings.max_memory.unwrap_or(4096);
+    let min_memory = settings.min_memory.unwrap_or(2048);
+
+    let launch_result = instance
         .launch(
             &profile,
-            settings
-                .java_distribution
-                .unwrap_or(JavaDistribution::Temurin),
+            java_distribution.clone(),
         )
         .with_event_bus(&event_bus.inner().clone())
         .with_jvm_options()
-        .set("Xmx", settings.max_memory.unwrap_or(4096).to_string() + "M")
-        .set("Xms", settings.min_memory.unwrap_or(2048).to_string() + "M")
+        .set("Xmx", max_memory.to_string() + "M")
+        .set("Xms", min_memory.to_string() + "M")
         .done()
         .run()
-        .await
-        .map_err(|e| {
-            let msg = format!("Launch failed: {:?}", e);
-            tracing::error!(%msg);
-            msg
-        })?;
+        .await;
+
+    match launch_result {
+        Ok(_) => {}
+        Err(first_error) => {
+            let first_debug = format!("{:?}", first_error);
+            if let Some(corrupted_path) = extract_sha1_mismatch_path(&first_debug) {
+                tracing::warn!(
+                    path = %corrupted_path,
+                    "Detected SHA1 mismatch, deleting corrupted file and retrying launch once"
+                );
+                if let Err(remove_error) = std::fs::remove_file(&corrupted_path) {
+                    tracing::warn!(
+                        path = %corrupted_path,
+                        error = %remove_error,
+                        "Unable to remove corrupted file before retry"
+                    );
+                }
+
+                instance
+                    .launch(&profile, java_distribution)
+                    .with_event_bus(&event_bus.inner().clone())
+                    .with_jvm_options()
+                    .set("Xmx", max_memory.to_string() + "M")
+                    .set("Xms", min_memory.to_string() + "M")
+                    .done()
+                    .run()
+                    .await
+                    .map_err(|retry_error| {
+                        let msg = format!("Launch failed after SHA1 retry: {:?}", retry_error);
+                        tracing::error!(%msg);
+                        msg
+                    })?;
+            } else {
+                let msg = format!("Launch failed: {:?}", first_error);
+                tracing::error!(%msg);
+                return Err(msg);
+            }
+        }
+    }
 
     let _ = instance_exit_rx.await;
     Ok(format!("Game {} launched successfully", modpack_name))
