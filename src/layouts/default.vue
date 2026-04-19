@@ -1,9 +1,25 @@
 <script setup lang="ts">
-import { useLauncherStore } from '~/stores/launcherStore'
+import { computed } from 'vue'
 import { useAccountRemoveConfirm } from '~/composables/useAccountRemoveConfirm'
 
-const store = useLauncherStore()
 const removeConfirm = useAccountRemoveConfirm()
+
+const removeAccountModal = computed(() => {
+  const name = removeConfirm.pendingAccount.value ?? ''
+  const offline = removeConfirm.pendingAccountType.value === 'offline'
+  if (offline) {
+    return {
+      title: 'Retirer le profil',
+      message: `Voulez-vous vraiment retirer le profil local ${name} ? Vous pourrez en créer un autre avec le même nom.`,
+      confirmLabel: 'Retirer',
+    }
+  }
+  return {
+    title: 'Déconnecter le compte',
+    message: `Voulez-vous vraiment déconnecter le compte ${name} ? Vous pourrez vous reconnecter à tout moment.`,
+    confirmLabel: 'Déconnecter',
+  }
+})
 </script>
 
 <template>
@@ -21,9 +37,9 @@ const removeConfirm = useAccountRemoveConfirm()
 
     <SettingsConfirmModal
       :show="removeConfirm.show.value"
-      title="Déconnecter le compte"
-      :message="`Voulez-vous vraiment déconnecter le compte ${removeConfirm.pendingAccount.value} ? Vous pourrez le reconnecter à tout moment.`"
-      confirm-label="Déconnecter"
+      :title="removeAccountModal.title"
+      :message="removeAccountModal.message"
+      :confirm-label="removeAccountModal.confirmLabel"
       variant="danger"
       @confirm="removeConfirm.confirm"
       @cancel="removeConfirm.cancel"

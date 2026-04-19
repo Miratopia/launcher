@@ -15,6 +15,9 @@ use tauri::{AppHandle, Emitter};
 pub struct UserProfilePartial {
     pub username: String,
     pub uuid: String,
+    /// `"microsoft"` ou `"offline"` — utilisé par l’UI pour les libellés.
+    #[serde(rename = "type")]
+    pub account_type: String,
 }
 
 const MICROSOFT_CLIENT_ID: &str = "7347d7b7-f14d-40c4-af19-f82204a7851e";
@@ -120,7 +123,27 @@ pub async fn display_account(
                 Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
                 None => return Ok(None),
             };
-            let profile = UserProfilePartial { username, uuid };
+            let provider_str = match store.get(PROVIDER_KEY.as_bytes()).map_err(|e| e.to_string())? {
+                Some(bytes) => String::from_utf8(bytes).map_err(|e| e.to_string())?,
+                None => String::new(),
+            };
+            let account_type = match provider_str.as_str() {
+                "microsoft" => "microsoft".to_string(),
+                "offline" => "offline".to_string(),
+                _ => {
+                    tracing::warn!(
+                        "Unknown or missing provider '{}' for profile '{}', treating as offline for UI",
+                        provider_str,
+                        profile_name
+                    );
+                    "offline".to_string()
+                }
+            };
+            let profile = UserProfilePartial {
+                username,
+                uuid,
+                account_type,
+            };
             Ok(Some(profile))
         },
     )?;

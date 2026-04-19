@@ -6,13 +6,20 @@ import { useLaunchStore } from './launchStore'
 import { useDownloadStore } from './downloadStore'
 import { LaunchStatus } from '~/types/lighty-events'
 import type { Settings } from '~/types/settings'
+import type { ModpackInfo } from '~/types/modpack'
 import consola from 'consola'
+
+/** Mo → Go avec une décimale (évite Math.round(8.5) === 9 et conserve les entrées type 8,5 Go). */
+function memoryMbToDisplayGb(mb: number): number {
+  return Math.round((mb / 1024) * 10) / 10
+}
 
 export interface Modpack {
   id: string
   name: string
   version: string
   mods: number
+  info: ModpackInfo | null
 }
 
 export interface Announcement {
@@ -41,11 +48,12 @@ export const useLauncherStore = defineStore('launcher', {
     modpacksLoading: false,
 
     modpackSettings: null as Settings | null,
+    /** Modpack dont les données dans `modpackSettings` correspondent (après dernier load/save réussi). */
+    loadedModpackSettingsId: '' as string,
     modpackSettingsLoading: false,
 
     announcements: [
-      { date: '27 juin 2025', title: "Nouvel événement : Attaquons tous ensemble l'Enderdragon !", type: 'event' },
-      { date: '22 juin 2025', title: 'Reset de la map Survie ce vendredi !', type: 'update' },
+      { date: '08 mai 2026', title: 'Ouverture du serveur TESTOPIA !', type: 'update' },
     ] as Announcement[],
   }),
 
@@ -92,14 +100,27 @@ export const useLauncherStore = defineStore('launcher', {
       return 16
     },
     memoryStep(): number {
-      return 1
+      return 0.5
     },
   },
 
   actions: {
+    async getSettingsMergeBase(forPackId: string): Promise<Settings> {
+      if (this.loadedModpackSettingsId === forPackId && this.modpackSettings) {
+        return this.modpackSettings
+      }
+      const { displayModpackSettings } = useSettingsCommand()
+      return await displayModpackSettings(forPackId)
+    },
+
     async selectPack(id: string) {
       this.selectedPack = id
-      localStorage.setItem('selectedPack', id)
+      const { updateLauncherSettings } = useSettingsCommand()
+      try {
+        await updateLauncherSettings({ selectedPack: id })
+      } catch (error) {
+        consola.error('Failed to persist selected pack:', error)
+      }
       await this.loadModpackSettings(id)
     },
 
@@ -158,15 +179,17 @@ export const useLauncherStore = defineStore('launcher', {
       try {
         this.modpacksLoading = true
         const result = await listModpacks()
-        if (Array.isArray(result) && result.length > 0) {
-          this.modpacks = result.map((name: string) => ({
-            id: name,
-            name,
-            version: '',
-            mods: 0,
+        if (result.length > 0) {
+          this.modpacks = result.map((info): Modpack => ({
+            id: info.id,
+            name: info.name,
+            version: info.minecraft.version,
+            mods: info.files.filter((f) => f.path.includes('mods/')).length,
+            info,
           }))
           if (!this.selectedPack || !this.modpacks.find((p) => p.id === this.selectedPack)) {
-            this.selectedPack = this.modpacks[0].id
+            const defaultPack = this.modpacks.find((p) => p.info?.default)
+            this.selectedPack = (defaultPack ?? this.modpacks[0]).id
           }
         } else {
           this.modpacks = []
@@ -188,17 +211,26 @@ export const useLauncherStore = defineStore('launcher', {
       try {
         this.modpackSettingsLoading = true
         this.modpackSettings = await displayModpackSettings(id)
-        if (this.modpackSettings?.maxMemory) {
-          this.setMemory(Math.round(this.modpackSettings.maxMemory / 1024))
-        }
-        if (this.modpackSettings?.fullScreen !== undefined) {
-          this.fullscreen = this.modpackSettings.fullScreen
-        }
-        if (this.modpackSettings?.windowWidth) {
-          this.resWidth = String(this.modpackSettings.windowWidth)
-        }
-        if (this.modpackSettings?.windowHeight) {
-          this.resHeight = String(this.modpackSettings.windowHeight)
+        this.loadedModpackSettingsId = id
+
+        if (id === this.selectedPack) {
+          if (this.modpackSettings?.maxMemory) {
+            this.setMemory(memoryMbToDisplayGb(this.modpackSettings.maxMemory))
+          } else {
+            const recommended = this.modpacks.find((p) => p.id === id)?.info?.minecraft.recommendedMemory
+            if (recommended) {
+              this.setMemory(memoryMbToDisplayGb(recommended))
+            }
+          }
+          if (this.modpackSettings?.fullScreen !== undefined) {
+            this.fullscreen = this.modpackSettings.fullScreen
+          }
+          if (this.modpackSettings?.windowWidth) {
+            this.resWidth = String(this.modpackSettings.windowWidth)
+          }
+          if (this.modpackSettings?.windowHeight) {
+            this.resHeight = String(this.modpackSettings.windowHeight)
+          }
         }
       } catch (error) {
         consola.error('Failed to load modpack settings:', error)
@@ -213,6 +245,10 @@ export const useLauncherStore = defineStore('launcher', {
       const { updateModpackSettings } = useSettingsCommand()
       try {
         this.modpackSettings = await updateModpackSettings(id, settings)
+        this.loadedModpackSettingsId = id
+        if (id === this.selectedPack && this.modpackSettings?.maxMemory) {
+          this.setMemory(memoryMbToDisplayGb(this.modpackSettings.maxMemory))
+        }
       } catch (error) {
         consola.error('Failed to save modpack settings:', error)
         throw error
@@ -232,6 +268,16 @@ export const useLauncherStore = defineStore('launcher', {
     },
 
     async init() {
+      const { displayLauncherSettings } = useSettingsCommand()
+      try {
+        const launcherSettings = await displayLauncherSettings()
+        if (launcherSettings.selectedPack) {
+          this.selectedPack = launcherSettings.selectedPack
+        }
+      } catch (error) {
+        consola.error('Failed to load launcher settings:', error)
+      }
+
       await this.fetchModpacks()
       if (this.selectedPack) {
         await this.loadModpackSettings()

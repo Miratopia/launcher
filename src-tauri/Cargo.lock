@@ -3122,7 +3122,7 @@ dependencies = [
 
 [[package]]
 name = "miratopia_launcher"
-version = "0.2.12"
+version = "0.2.13"
 dependencies = [
  "anyhow",
  "chrono",

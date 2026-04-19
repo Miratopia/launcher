@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Trash2, CheckCircle, Loader2, Globe, Wifi, XCircle } from 'lucide-vue-next'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { useAccountsStore } from '~/stores/accountsStore'
@@ -12,6 +12,17 @@ const offlineNameInput = ref('')
 const showOfflineForm = ref(false)
 
 const { requestRemove } = useAccountRemoveConfirm()
+
+const activeAccountSubtitle = computed(() => {
+  if (!store.activeAccount) return ''
+  return store.activeAccount.type === 'offline'
+    ? 'Profil hors-ligne • Actif'
+    : 'Compte Microsoft • Actif'
+})
+
+async function onRequestRemove(profileName: string) {
+  await requestRemove(profileName)
+}
 
 async function handleAddMicrosoft() {
   await store.addMicrosoftAccount()
@@ -47,7 +58,7 @@ async function handleSwitch(profileName: string) {
         <div class="flex-1">
           <h3 class="text-sm font-medium text-white">{{ store.activeAccount.username }}</h3>
           <p class="text-xs text-amber-400/80 mt-0.5">
-            Compte Minecraft &bull; Actif
+            {{ activeAccountSubtitle }}
           </p>
         </div>
         <div class="w-3 h-3 bg-emerald-400 rounded-full shadow-lg shadow-emerald-400/50" />
@@ -84,7 +95,7 @@ async function handleSwitch(profileName: string) {
             :disabled="launcherStore.isGameActive"
             class="p-2 rounded-lg bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 text-white/60 hover:text-red-400 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:text-white/60"
             title="Supprimer ce compte"
-            @click="requestRemove(account)"
+            @click="onRequestRemove(account)"
           >
             <Trash2 :size="16" />
           </button>
