@@ -5,8 +5,8 @@ import { useLauncherStore } from '~/stores/launcherStore'
 const store = useLauncherStore()
 
 async function saveMemory() {
-  const current = store.modpackSettings ?? {}
-  await store.saveModpackSettings({ ...current, maxMemory: store.memory * 1024 })
+  const current = await store.getSettingsMergeBase(store.selectedPack)
+  await store.saveModpackSettings({ ...current, maxMemory: store.memory * 1024 }, store.selectedPack)
 }
 
 async function onDecrease() {

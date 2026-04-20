@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { User, UserPlus, LogOut, RefreshCw } from 'lucide-vue-next'
 import { useAccountsStore } from '~/stores/accountsStore'
 import { useLauncherStore } from '~/stores/launcherStore'
@@ -31,11 +31,22 @@ function handleAddAccount() {
   launcherStore.openSettings('accounts')
 }
 
-function handleLogout() {
+async function handleLogout() {
   if (!store.activeAccount) return
   close()
-  requestRemove(store.activeAccount.username)
+  await requestRemove(store.activeAccount.username, { type: store.activeAccount.type })
 }
+
+const activeAccountKindLabel = computed(() => {
+  if (!store.activeAccount) return ''
+  return store.activeAccount.type === 'offline'
+    ? 'Profil hors-ligne'
+    : 'Compte Microsoft'
+})
+
+const removeActiveAccountLabel = computed(() =>
+  store.activeAccount?.type === 'offline' ? 'Retirer le profil' : 'Se déconnecter',
+)
 
 onMounted(() => document.addEventListener('mousedown', onClickOutside))
 onUnmounted(() => document.removeEventListener('mousedown', onClickOutside))
@@ -69,7 +80,7 @@ defineExpose({ close })
             <div>
               <p class="text-sm font-medium text-white">{{ store.activeAccount.username }}</p>
               <p class="text-xs text-white/40">
-                Compte Minecraft
+                {{ activeAccountKindLabel }}
               </p>
             </div>
           </template>
@@ -105,7 +116,7 @@ defineExpose({ close })
             @click="handleLogout"
           >
             <LogOut :size="16" class="text-white/40 group-hover:text-red-400" />
-            <span class="text-sm text-white/80 group-hover:text-red-400">Se déconnecter</span>
+            <span class="text-sm text-white/80 group-hover:text-red-400">{{ removeActiveAccountLabel }}</span>
           </button>
         </div>
       </div>

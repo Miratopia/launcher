@@ -5,8 +5,9 @@ use lighty_launcher::prelude::InstanceControl;
 use lighty_launcher::Loader;
 use lighty_launcher::{loaders::Mods, prelude::*};
 use once_cell::sync::Lazy;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 use std::sync::Mutex;
 use tauri::State;
 
@@ -48,57 +49,58 @@ fn normalize_loader_version(loader: &Loader, version: &str, minecraft_version: &
     version.to_string()
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Deserialize, Clone)]
-struct MinecraftModpackInfo {
-    version: String,
-    #[serde(rename = "recommendedMemory")]
-    recommended_memory: u32,
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct MinecraftModpackInfo {
+    pub version: String,
+    pub recommended_memory: u32,
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Deserialize, Clone)]
-struct LoaderModpackInfo {
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct LoaderModpackInfo {
     #[serde(rename = "type")]
-    loader_type: String,
-    version: String,
+    pub loader_type: String,
+    pub version: String,
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Deserialize, Clone)]
-struct FileModpackInfo {
-    url: String,
-    path: String,
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FileModpackInfo {
+    pub url: String,
+    pub path: String,
     #[serde(default)]
-    hash: Option<String>,
+    pub hash: Option<String>,
     #[serde(default)]
-    size: Option<u64>,
+    pub size: Option<u64>,
+    #[serde(default)]
+    pub optional: bool,
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Deserialize, Clone)]
-struct ModpackInfo {
-    id: String,
-    name: String,
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ModpackInfo {
+    pub id: String,
+    pub name: String,
     #[serde(rename = "default")]
-    default_modpack: bool,
-    description: String,
-    hidden: bool,
+    pub default_modpack: bool,
+    pub description: String,
+    pub hidden: bool,
 
     #[serde(rename = "minecraft")]
-    minecraft_info: MinecraftModpackInfo,
+    pub minecraft_info: MinecraftModpackInfo,
 
     #[serde(rename = "loaders")]
-    modloader_info: Vec<LoaderModpackInfo>,
+    pub modloader_info: Vec<LoaderModpackInfo>,
 
     #[serde(rename = "files")]
-    files_info: Vec<FileModpackInfo>,
+    pub files_info: Vec<FileModpackInfo>,
 
     #[serde(default)]
-    whitelist: Option<Vec<String>>,
+    pub whitelist: Option<Vec<String>>,
 
     #[serde(rename = "ignoredFiles", default)]
-    ignored_files: Option<Vec<String>>,
+    pub ignored_files: Option<Vec<String>>,
 }
 
 #[tauri::command]
@@ -136,8 +138,9 @@ pub fn open_modpacks_folder() -> Result<(), String> {
     Ok(())
 }
 
-/// Remove the contents of each modpack directory, preserving entries listed
-/// in `config.ignored_files` from the remote `launcher.json`.
+/// Remove the contents of each modpack directory, preserving entries listed in
+/// `config.ignored_files` from the remote `launcher.json`, plus each modpack's
+/// `ignoredFiles` from its `modpack.json` (instance folders are named after `id`).
 #[tauri::command]
 pub async fn delete_all_modpacks() -> Result<(), String> {
     let url = "https://raw.githubusercontent.com/tacxtv/miratopia-launcher/refs/heads/config/launcher.json";
@@ -149,7 +152,7 @@ pub async fn delete_all_modpacks() -> Result<(), String> {
         .map_err(|e| format!("Failed to parse launcher.json: {}", e))?;
 
     let config = json.get("config").ok_or("No config found")?;
-    let ignored_files: Vec<String> = config
+    let global_ignored: Vec<String> = config
         .get("ignored_files")
         .and_then(|v| v.as_array())
         .map(|arr| {
@@ -158,6 +161,45 @@ pub async fn delete_all_modpacks() -> Result<(), String> {
                 .collect()
         })
         .unwrap_or_default();
+
+    let modpack_names: Vec<String> = config
+        .get("modpacks")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|m| m.get("name").and_then(|n| n.as_str()).map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let handles: Vec<_> = modpack_names
+        .iter()
+        .map(|name| {
+            let name = name.clone();
+            tokio::spawn(async move { fetch_modpack_info(&name).await })
+        })
+        .collect();
+
+    let mut ignored_by_instance_id: HashMap<String, Vec<String>> = HashMap::new();
+    for (handle, name) in handles.into_iter().zip(&modpack_names) {
+        match handle.await {
+            Ok(Ok(info)) => {
+                if let Some(files) = info.ignored_files.filter(|f| !f.is_empty()) {
+                    ignored_by_instance_id.insert(info.id, files);
+                }
+            }
+            Ok(Err(e)) => tracing::warn!(
+                modpack = %name,
+                error = %e,
+                "Could not fetch modpack.json for ignoredFiles merge"
+            ),
+            Err(e) => tracing::warn!(
+                modpack = %name,
+                error = %e,
+                "Task failed while fetching modpack.json for ignoredFiles"
+            ),
+        }
+    }
 
     let launcher_dir = AppState::get_project_dirs();
     let data_path = launcher_dir.data_dir();
@@ -174,7 +216,12 @@ pub async fn delete_all_modpacks() -> Result<(), String> {
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
         if path.is_dir() {
-            clean_modpack_dir(&path, &ignored_files)?;
+            let instance_id = entry.file_name().to_string_lossy().into_owned();
+            let mut merged = global_ignored.clone();
+            if let Some(extra) = ignored_by_instance_id.get(&instance_id) {
+                merged.extend(extra.iter().cloned());
+            }
+            clean_modpack_dir(&path, &merged)?;
             tracing::info!("Cleaned modpack directory: {:?}", path);
         }
     }
@@ -213,15 +260,28 @@ fn clean_modpack_dir(
     Ok(())
 }
 
+async fn fetch_modpack_info(name: &str) -> Result<ModpackInfo, String> {
+    let url = format!(
+        "https://raw.githubusercontent.com/tacxtv/miratopia-launcher/refs/heads/config/modpacks/{}/modpack.json",
+        name,
+    );
+    let info = reqwest::get(&url)
+        .await
+        .map_err(|e| format!("Failed to download modpack info from {}: {}", url, e))?
+        .json::<ModpackInfo>()
+        .await
+        .map_err(|e| format!("Failed to parse modpack JSON from {}: {}", url, e))?;
+    Ok(info)
+}
+
 #[tauri::command]
-pub async fn list_modpacks(state: State<'_, VaultState>) -> Result<Vec<String>, String> {
+pub async fn list_modpacks(state: State<'_, VaultState>) -> Result<Vec<ModpackInfo>, String> {
     let profile_name = display_active_account(state.clone())
         .await
         .map_err(|e| format!("Failed to get active account: {}", e))?
         .ok_or_else(|| "No active profile".to_string())?
         .username;
 
-    // Télécharger le JSON principal
     let url = "https://raw.githubusercontent.com/tacxtv/miratopia-launcher/refs/heads/config/launcher.json";
     let json: Value = reqwest::get(url)
         .await
@@ -230,22 +290,19 @@ pub async fn list_modpacks(state: State<'_, VaultState>) -> Result<Vec<String>, 
         .await
         .map_err(|e| format!("Failed to parse launcher.json: {}", e))?;
 
-    // Extraire le tableau des modpacks
     let config = json.get("config").ok_or("No config found")?;
     let modpacks = config
         .get("modpacks")
         .and_then(|v| v.as_array())
         .ok_or("No modpacks array found")?;
 
-    // Récupérer le compte
     let profile = display_account(state, &profile_name)
         .await
         .map_err(|e| format!("Failed to get account: {}", e))?
         .ok_or_else(|| "Profile not found".to_string())?;
     let username = profile.username.to_lowercase();
 
-    // Filtrer les modpacks accessibles
-    let mut allowed = Vec::new();
+    let mut allowed_names = Vec::new();
     for modpack in modpacks {
         let whitelisted = modpack
             .get("whitelisted")
@@ -262,11 +319,29 @@ pub async fn list_modpacks(state: State<'_, VaultState>) -> Result<Vec<String>, 
         });
         if whitelisted && is_in_whitelist || !whitelisted {
             if let Some(name) = modpack.get("name").and_then(|v| v.as_str()) {
-                allowed.push(name.to_string());
+                allowed_names.push(name.to_string());
             }
         }
     }
-    Ok(allowed)
+
+    let handles: Vec<_> = allowed_names
+        .iter()
+        .map(|name| {
+            let name = name.clone();
+            tokio::spawn(async move { fetch_modpack_info(&name).await })
+        })
+        .collect();
+
+    let mut result = Vec::with_capacity(handles.len());
+    for (handle, name) in handles.into_iter().zip(&allowed_names) {
+        match handle.await {
+            Ok(Ok(info)) => result.push(info),
+            Ok(Err(e)) => tracing::warn!(modpack = %name, error = %e, "Skipping modpack"),
+            Err(e) => tracing::warn!(modpack = %name, error = %e, "Skipping modpack (task failed)"),
+        }
+    }
+
+    Ok(result)
 }
 
 #[tauri::command]

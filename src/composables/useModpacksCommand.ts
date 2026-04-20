@@ -1,12 +1,12 @@
 import { invoke } from "@tauri-apps/api/core"
+import type { ModpackInfo } from '~/types/modpack'
 
 export function useModpacksCommand() {
-  async function listModpacks(): Promise<any> {
+  async function listModpacks(): Promise<ModpackInfo[]> {
     try {
-      return await invoke('list_modpacks')
+      return await invoke<ModpackInfo[]>('list_modpacks')
     } catch (error) {
       console.error('Failed to list modpacks:', error)
-      // throw error
     }
     return []
   }
