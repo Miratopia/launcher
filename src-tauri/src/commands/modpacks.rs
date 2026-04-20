@@ -1,9 +1,10 @@
 use crate::commands::accounts::{display_account, display_active_account, get_active_account};
 use crate::commands::settings::get_modpack_settings;
 use crate::utils::vault::VaultState;
+use lighty_launcher::_loaders::types::version_metadata::AssetsFile;
 use lighty_launcher::prelude::InstanceControl;
 use lighty_launcher::Loader;
-use lighty_launcher::{loaders::Mods, prelude::*};
+use lighty_launcher::{loaders::{Asset, Mods}, prelude::*};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -274,6 +275,20 @@ async fn fetch_modpack_info(name: &str) -> Result<ModpackInfo, String> {
     Ok(info)
 }
 
+async fn fetch_modpack_additional_files(name: &str) -> Result<Vec<FileModpackInfo>, String> {
+    let url = format!(
+        "https://raw.githubusercontent.com/tacxtv/miratopia-launcher/refs/heads/config/modpacks/{}/files.json",
+        name,
+    );
+    let files = reqwest::get(&url)
+        .await
+        .map_err(|e| format!("Failed to download files.json from {}: {}", url, e))?
+        .json::<Vec<FileModpackInfo>>()
+        .await
+        .map_err(|e| format!("Failed to parse files.json from {}: {}", url, e))?;
+    Ok(files)
+}
+
 #[tauri::command]
 pub async fn list_modpacks(state: State<'_, VaultState>) -> Result<Vec<ModpackInfo>, String> {
     let profile_name = display_active_account(state.clone())
@@ -471,6 +486,31 @@ pub async fn start_modpack(
     }
 
     instance = instance.with_mods(mods);
+
+    let additional_files = fetch_modpack_additional_files(&modpack_name).await?;
+    let mut assets = HashMap::new();
+    for file in additional_files {
+        match (file.hash, file.size) {
+            (Some(hash), Some(size)) => {
+                assets.insert(
+                    file.path,
+                    Asset {
+                        hash,
+                        size,
+                        url: Some(file.url),
+                    },
+                );
+            }
+            _ => tracing::warn!(
+                "Skipping additional file '{}' because hash or size is missing",
+                file.path
+            ),
+        }
+    }
+    if !assets.is_empty() {
+        instance = instance.with_assets(AssetsFile { objects: assets });
+    }
+
 
     // Stocke l'instance dans la variable globale
     // {
