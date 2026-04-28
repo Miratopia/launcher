@@ -35,6 +35,8 @@ const removeAccountModal = computed(() => {
 
     <SettingsModal />
 
+    <ModpackOptionalModsDialog />
+
     <SettingsConfirmModal
       :show="removeConfirm.show.value"
       :title="removeAccountModal.title"

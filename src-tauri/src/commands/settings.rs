@@ -2,8 +2,6 @@ use lighty_launcher::JavaDistribution;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections::HashMap;
-use std::sync::LazyLock;
-use std::sync::Mutex;
 use tauri::{command, AppHandle};
 use tauri_plugin_store::StoreBuilder;
 
@@ -42,6 +40,16 @@ pub struct Settings {
     pub full_screen: Option<bool>,
     pub window_width: Option<u32>,
     pub window_height: Option<u32>,
+    /// Chemins (relatifs à la racine du modpack) des fichiers optionnels activés
+    /// par l'utilisateur. `None` = jamais initialisé pour ce modpack.
+    /// Sérialisé seulement si `Some` pour rester aligné avec le type TS
+    /// (`optionalFiles?: string[]`) côté frontend.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub optional_files: Option<Vec<String>>,
+    /// `true` lorsque le dialogue "premier lancement" pour les mods optionnels
+    /// a déjà été présenté à l'utilisateur sur ce modpack.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub optional_files_prompted: Option<bool>,
 }
 
 /// Valeurs par défaut des paramètres.
@@ -60,36 +68,35 @@ impl Default for Settings {
             full_screen: Some(FULL_SCREEN_DEFAULT),
             window_width: Some(WINDOW_WIDTH_DEFAULT),
             window_height: Some(WINDOW_HEIGHT_DEFAULT),
+            optional_files: None,
+            optional_files_prompted: None,
         }
     }
 }
 
-/// Cache en mémoire des settings, indexé par nom de modpack.
+/// Lit les settings d’un modpack depuis le store (sous-clé modpacks).
 ///
-/// Objectif : éviter de relire le store à chaque appel.
-/// Le cache est mis à jour lors d’un `get_modpack_settings` (miss) et lors d’un `update_modpack_settings`.
-static SETTINGS_CACHE: LazyLock<Mutex<HashMap<String, Settings>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
-
-/// Lit les settings d’un modpack depuis le cache ou, à défaut, depuis le store (sous-clé modpacks).
-///
-/// - Si le cache contient déjà l’entrée, on renvoie une copie.
-/// - Sinon, on charge depuis le store (`settings.json`) à la clé `modpacks.{modpack_name}`.
-/// - Si la clé n’existe pas ou si la désérialisation échoue, on renvoie `Settings::default()`.
-///
-/// Le résultat est ensuite stocké dans le cache.
+/// - Forçage d’un `reload()` du store sous-jacent pour récupérer les modifications
+///   éventuellement faites manuellement dans `settings.json` entre deux lectures
+///   (le plugin `tauri-plugin-store` garde un cache process-wide qui survit aux
+///   F5/recharges de webview).
+/// - Charge la sous-clé `settings.{modpack_name}`.
+/// - Si la clé n’existe pas ou si la désérialisation échoue, renvoie `Settings::default()`.
 pub fn get_modpack_settings(app: &AppHandle, modpack_name: &str) -> Settings {
-    let mut cache = SETTINGS_CACHE.lock().unwrap();
-
-    if let Some(settings) = cache.get(modpack_name) {
-        return settings.clone();
-    }
-
     let store = StoreBuilder::new(app, std::path::Path::new(SETTINGS_STORE))
         .build()
         .expect("Erreur lors de la création du store");
+
+    if let Err(e) = store.reload() {
+        tracing::debug!(
+            "Failed to reload {} from disk (likely missing): {}",
+            SETTINGS_STORE,
+            e
+        );
+    }
+
     let modpacks_value = store.get(SETTINGS_KEY);
-    let settings: Settings = match modpacks_value {
+    match modpacks_value {
         Some(val) => {
             let map: HashMap<String, serde_json::Value> =
                 serde_json::from_value(val.clone()).unwrap_or_default();
@@ -99,10 +106,7 @@ pub fn get_modpack_settings(app: &AppHandle, modpack_name: &str) -> Settings {
             }
         }
         None => Settings::default(),
-    };
-
-    cache.insert(modpack_name.to_string(), settings.clone());
-    settings
+    }
 }
 
 /// Commande Tauri : retourne les settings d’un modpack (clé modpacks).
@@ -114,7 +118,7 @@ pub fn display_modpack_settings(app: AppHandle, modpack_name: String) -> Result<
     Ok(get_modpack_settings(&app, &modpack_name))
 }
 
-/// Commande Tauri : écrit les settings d’un modpack dans la sous-clé modpacks et met à jour le cache.
+/// Commande Tauri : écrit les settings d’un modpack dans la sous-clé modpacks.
 ///
 /// ⚠️ Important : cette implémentation **n’effectue pas de merge**.
 /// Elle sérialise `new_settings` tel quel et **remplace** la valeur stockée pour `modpack_name` dans la sous-clé modpacks.
@@ -127,7 +131,15 @@ pub fn update_modpack_settings(
     let store = StoreBuilder::new(&app, std::path::Path::new(SETTINGS_STORE))
         .build()
         .map_err(|e| e.to_string())?;
-    // Charger l'existant
+
+    if let Err(e) = store.reload() {
+        tracing::debug!(
+            "Failed to reload {} before update (likely missing): {}",
+            SETTINGS_STORE,
+            e
+        );
+    }
+
     let mut modpacks_map: HashMap<String, serde_json::Value> = match store.get(SETTINGS_KEY) {
         Some(val) => serde_json::from_value(val.clone()).unwrap_or_default(),
         None => HashMap::new(),
@@ -139,13 +151,11 @@ pub fn update_modpack_settings(
         serde_json::to_value(&modpacks_map).map_err(|e| e.to_string())?,
     );
     store.save().map_err(|e| e.to_string())?;
-    let mut cache = SETTINGS_CACHE.lock().unwrap();
-    cache.insert(modpack_name.clone(), new_settings.clone());
 
     Ok(new_settings)
 }
 
-/// Reset all settings to the default values (settings.json + memory cache)
+/// Reset all settings to the default values (efface `settings.json`).
 #[command]
 pub fn reset_all_settings(app: AppHandle) -> Result<(), String> {
     let store = StoreBuilder::new(&app, std::path::Path::new(SETTINGS_STORE))
@@ -154,9 +164,6 @@ pub fn reset_all_settings(app: AppHandle) -> Result<(), String> {
 
     store.clear();
     store.save().map_err(|e| e.to_string())?;
-
-    let mut cache = SETTINGS_CACHE.lock().unwrap();
-    cache.clear();
 
     tracing::info!("All settings have been reset");
     Ok(())

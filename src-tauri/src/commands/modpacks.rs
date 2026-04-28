@@ -1,10 +1,10 @@
 use crate::commands::accounts::{display_account, display_active_account, get_active_account};
 use crate::commands::settings::get_modpack_settings;
 use crate::utils::vault::VaultState;
-use lighty_launcher::_loaders::types::version_metadata::AssetsFile;
+use lighty_launcher::loaders::Mods;
 use lighty_launcher::prelude::InstanceControl;
+use lighty_launcher::prelude::*;
 use lighty_launcher::Loader;
-use lighty_launcher::{loaders::{Asset, Mods}, prelude::*};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -76,6 +76,12 @@ pub struct FileModpackInfo {
     pub size: Option<u64>,
     #[serde(default)]
     pub optional: bool,
+    #[serde(default, rename = "default")]
+    pub default_enabled: bool,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -275,20 +281,6 @@ async fn fetch_modpack_info(name: &str) -> Result<ModpackInfo, String> {
     Ok(info)
 }
 
-async fn fetch_modpack_additional_files(name: &str) -> Result<Vec<FileModpackInfo>, String> {
-    let url = format!(
-        "https://raw.githubusercontent.com/tacxtv/miratopia-launcher/refs/heads/config/modpacks/{}/files.json",
-        name,
-    );
-    let files = reqwest::get(&url)
-        .await
-        .map_err(|e| format!("Failed to download files.json from {}: {}", url, e))?
-        .json::<Vec<FileModpackInfo>>()
-        .await
-        .map_err(|e| format!("Failed to parse files.json from {}: {}", url, e))?;
-    Ok(files)
-}
-
 #[tauri::command]
 pub async fn list_modpacks(state: State<'_, VaultState>) -> Result<Vec<ModpackInfo>, String> {
     let profile_name = display_active_account(state.clone())
@@ -460,24 +452,49 @@ pub async fn start_modpack(
 
     let mut instance = VersionBuilder::new(
         &modpack.id,
-        loader_type,
+        loader_type.clone(),
         normalized_loader_version.as_str(),
         modpack.minecraft_info.version.as_str(),
         launcher_dir,
     );
 
+    let enabled_optional: std::collections::HashSet<String> = settings
+        .optional_files
+        .clone()
+        .unwrap_or_default()
+        .into_iter()
+        .collect();
+
+    // Les fichiers situés dans `mods/` doivent passer par `with_mods` car
+    // l'étape 3c du launcher (`cleanup_unauthorized_files_step3c`) supprime
+    // automatiquement tout fichier dans `mods/` qui n'est pas listé dans
+    // `version_data.mods`. Les autres fichiers (shaderpacks, resourcepacks,
+    // configs, etc.) passent par `with_files` puisque ces dossiers ne sont
+    // pas concernés par le nettoyage.
     let mut mods = Vec::new();
+    let mut files = Vec::new();
     for file in &modpack.files_info {
-        if file.path.contains("mods/") {
-            if file.hash.is_none() {
-                tracing::warn!(
-                    "Missing hash for mod file '{}'; continuing without sha1 verification",
-                    file.path
-                );
-            }
+        if file.optional && !enabled_optional.contains(&file.path) {
+            continue;
+        }
+        if file.hash.is_none() {
+            tracing::warn!(
+                "Missing hash for file '{}'; continuing without sha1 verification",
+                file.path
+            );
+        }
+        if let Some(stripped) = file.path.strip_prefix("mods/") {
             mods.push(Mods {
                 name: file.path.clone(),
-                path: Some(file.path.clone().replace("mods/", "")),
+                path: Some(stripped.to_string()),
+                url: Some(file.url.clone()),
+                sha1: file.hash.clone(),
+                size: file.size,
+            });
+        } else {
+            files.push(Mods {
+                name: file.path.clone(),
+                path: Some(file.path.clone()),
                 url: Some(file.url.clone()),
                 sha1: file.hash.clone(),
                 size: file.size,
@@ -485,32 +502,43 @@ pub async fn start_modpack(
         }
     }
 
-    instance = instance.with_mods(mods);
+    if !mods.is_empty() {
+        instance = instance.with_mods(mods);
+    }
+    if !files.is_empty() {
+        instance = instance.with_files(files);
+    }
 
-    let additional_files = fetch_modpack_additional_files(&modpack_name).await?;
-    let mut assets = HashMap::new();
-    for file in additional_files {
-        match (file.hash, file.size) {
-            (Some(hash), Some(size)) => {
-                assets.insert(
-                    file.path,
-                    Asset {
-                        hash,
-                        size,
-                        url: Some(file.url),
-                    },
-                );
-            }
-            _ => tracing::warn!(
-                "Skipping additional file '{}' because hash or size is missing",
-                file.path
-            ),
+    // Vide le cache de métadonnées du loader avant le lancement.
+    //
+    // `lighty-launcher` mémorise (TTL ~1h, statique partagé par tout le
+    // processus, voir `ManifestRepository`) une `Version` dans laquelle
+    // les `custom_mods` / `custom_files` du `VersionBuilder` sont déjà
+    // baked-in. Si l'utilisateur (re)lance la même instance après avoir
+    // modifié sa sélection de mods optionnels, `get_metadata` ressort
+    // l'ancienne `Version` du cache et :
+    //   - les mods fraîchement activés ne sont jamais téléchargés ;
+    //   - l'allowlist de l'étape 3c (`cleanup_unauthorized_files_step3c`)
+    //     est construite sur la base de cette ancienne liste, donc tout
+    //     mod désactivé puis réactivé peut aussi disparaître du dossier.
+    //
+    // Tant que le cache n'est pas exposé par modpack, on le purge en
+    // entier pour le loader courant. Le coût est négligeable : un seul
+    // re-fetch des métadonnées (essentiellement local après l'install
+    // initial), réalisé une fois par lancement.
+    match loader_type {
+        Loader::Fabric => {
+            lighty_launcher::loaders::fabric::fabric::FABRIC
+                .clear_cache()
+                .await;
         }
+        Loader::NeoForge => {
+            lighty_launcher::loaders::neoforge::neoforge::NEOFORGE
+                .clear_cache()
+                .await;
+        }
+        _ => {}
     }
-    if !assets.is_empty() {
-        instance = instance.with_assets(AssetsFile { objects: assets });
-    }
-
 
     // Stocke l'instance dans la variable globale
     // {

@@ -35,6 +35,17 @@ export interface Settings {
   fullScreen?: boolean,
   windowWidth?: number,
   windowHeight?: number,
+  /**
+   * Chemins (relatifs à la racine du modpack) des fichiers optionnels actuellement
+   * activés par l'utilisateur. `undefined` signifie que la liste n'a pas encore
+   * été initialisée pour ce modpack.
+   */
+  optionalFiles?: string[],
+  /**
+   * Indique si la boîte de dialogue "premier lancement" pour les mods optionnels
+   * a déjà été présentée à l'utilisateur sur ce modpack.
+   */
+  optionalFilesPrompted?: boolean,
 }
 
 /**

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Cpu, Monitor, ToggleLeft, ToggleRight, ChevronRight, ChevronDown, Loader2, Minus, Plus } from 'lucide-vue-next'
+import { Cpu, Monitor, ToggleLeft, ToggleRight, ChevronRight, ChevronDown, Loader2, Minus, Plus, Puzzle, Settings as SettingsIcon } from 'lucide-vue-next'
 import { useLauncherStore } from '~/stores/launcherStore'
 import { useSettingsCommand } from '~/composables/useSettingsCommand'
 import type { Settings, JavaDistributionListItem } from '~/types/settings'
@@ -13,6 +13,11 @@ const store = useLauncherStore()
 const { listJavaDistributions } = useSettingsCommand()
 
 const javaDistributions: JavaDistributionListItem[] = listJavaDistributions()
+
+const optionalModsCount = computed(() => store.optionalFilesFor(props.modpackId).length)
+const enabledOptionalCount = computed(
+  () => store.modpackSettings?.optionalFiles?.length ?? 0,
+)
 
 /** RAM du modpack ouvert dans les réglages : si ce n’est pas le modpack sélectionné dans la barre, on n’utilise pas `store.memory` (réservé au panneau latéral). */
 const ramIsSharedWithSidebar = computed(() => props.modpackId === store.selectedPack)
@@ -261,6 +266,26 @@ async function onIncreaseRam() {
             </div>
             <span class="text-xs text-white/30">max 16 Go</span>
           </div>
+        </template>
+      </SettingsSettingRow>
+
+      <!-- Mods optionnels -->
+      <SettingsSettingRow
+        v-if="optionalModsCount > 0"
+        :icon="Puzzle"
+        title="Mods optionnels"
+        :description="`${enabledOptionalCount} / ${optionalModsCount} activés`"
+      >
+        <template #action>
+          <button
+            type="button"
+            :disabled="store.isGameActive"
+            class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 hover:text-amber-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            @click="store.openOptionalModsManager(props.modpackId)"
+          >
+            <SettingsIcon :size="14" />
+            Gérer les mods optionnels
+          </button>
         </template>
       </SettingsSettingRow>
 

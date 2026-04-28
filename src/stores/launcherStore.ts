@@ -28,6 +28,14 @@ export interface Announcement {
   type: 'event' | 'update'
 }
 
+export type OptionalModsDialogMode = 'manage' | 'first-launch' | 'view-all'
+
+export interface OptionalModsDialogState {
+  show: boolean
+  modpackId: string
+  mode: OptionalModsDialogMode
+}
+
 export const useLauncherStore = defineStore('launcher', {
   state: () => ({
     memory: 8,
@@ -51,6 +59,12 @@ export const useLauncherStore = defineStore('launcher', {
     /** Modpack dont les données dans `modpackSettings` correspondent (après dernier load/save réussi). */
     loadedModpackSettingsId: '' as string,
     modpackSettingsLoading: false,
+
+    optionalModsDialog: {
+      show: false,
+      modpackId: '',
+      mode: 'manage',
+    } as OptionalModsDialogState,
 
     announcements: [
       { date: '08 mai 2026', title: 'Ouverture du serveur TESTOPIA !', type: 'update' },
@@ -113,14 +127,70 @@ export const useLauncherStore = defineStore('launcher', {
       return await displayModpackSettings(forPackId)
     },
 
+    /**
+     * Calcule la liste des chemins de fichiers optionnels activés par défaut
+     * (i.e. déclarés `optional: true` ET `default: true` dans le modpack.json).
+     * Retourne `undefined` si le modpack n'est pas (encore) chargé.
+     */
+    defaultOptionalPaths(modpackId: string): string[] | undefined {
+      const info = this.modpacks.find((p) => p.id === modpackId)?.info
+      if (!info) return undefined
+      return info.files
+        .filter((f) => f.optional && f.default)
+        .map((f) => f.path)
+    },
+
+    /** Liste des fichiers optionnels disponibles pour un modpack (peu importe leur état). */
+    optionalFilesFor(modpackId: string) {
+      const info = this.modpacks.find((p) => p.id === modpackId)?.info
+      if (!info) return []
+      return info.files.filter((f) => f.optional)
+    },
+
+    /**
+     * Initialise `optionalFiles` pour TOUS les modpacks chargés dans le store.
+     *
+     * - Pour chaque modpack, lit l'état actuel via `display_modpack_settings`.
+     * - Si `optionalFiles` est déjà défini (array, même vide), ne touche à rien.
+     * - Sinon, persiste la liste par défaut (chemins des fichiers `optional: true && default: true`).
+     * - Ne touche jamais à `optionalFilesPrompted` afin que le dialogue de premier
+     *   lancement reste déclenché à la première utilisation.
+     *
+     * Cette méthode est appelée automatiquement à la fin de `fetchModpacks()`.
+     *
+     * Note : côté backend, `Option::None` peut sérialiser en `null` ou être absent
+     * selon la version du store ; on traite donc `null` ET `undefined` comme
+     * "non initialisé" via `!= null`.
+     */
+    async ensureAllOptionalFilesInitialized() {
+      if (this.modpacks.length === 0) return
+
+      const { displayModpackSettings, updateModpackSettings } = useSettingsCommand()
+
+      for (const pack of this.modpacks) {
+        try {
+          const current = await displayModpackSettings(pack.id)
+          if (current.optionalFiles != null) continue
+
+          const defaults = this.defaultOptionalPaths(pack.id)
+          if (defaults === undefined) continue
+
+          const updated = await updateModpackSettings(pack.id, {
+            ...current,
+            optionalFiles: defaults,
+          })
+
+          if (this.loadedModpackSettingsId === pack.id) {
+            this.modpackSettings = updated
+          }
+        } catch (error) {
+          consola.error(`Failed to initialize optionalFiles for "${pack.id}":`, error)
+        }
+      }
+    },
+
     async selectPack(id: string) {
       this.selectedPack = id
-      const { updateLauncherSettings } = useSettingsCommand()
-      try {
-        await updateLauncherSettings({ selectedPack: id })
-      } catch (error) {
-        consola.error('Failed to persist selected pack:', error)
-      }
       await this.loadModpackSettings(id)
     },
 
@@ -191,6 +261,7 @@ export const useLauncherStore = defineStore('launcher', {
             const defaultPack = this.modpacks.find((p) => p.info?.default)
             this.selectedPack = (defaultPack ?? this.modpacks[0]).id
           }
+          await this.ensureAllOptionalFilesInitialized()
         } else {
           this.modpacks = []
           this.selectedPack = ''
@@ -239,6 +310,20 @@ export const useLauncherStore = defineStore('launcher', {
       }
     },
 
+    openOptionalModsManager(modpackId?: string) {
+      const id = modpackId ?? this.selectedPack
+      if (!id) return
+      this.optionalModsDialog = { show: true, modpackId: id, mode: 'manage' }
+    },
+
+    openAllModsViewer(modpackId: string) {
+      this.optionalModsDialog = { show: true, modpackId, mode: 'view-all' }
+    },
+
+    closeOptionalModsDialog() {
+      this.optionalModsDialog = { ...this.optionalModsDialog, show: false }
+    },
+
     async saveModpackSettings(settings: Settings, modpackId?: string) {
       const id = modpackId ?? this.selectedPack
       if (!id) return
@@ -257,6 +342,22 @@ export const useLauncherStore = defineStore('launcher', {
 
     async launchGame() {
       if (!this.selectedPack) return
+
+      if (this.loadedModpackSettingsId !== this.selectedPack || !this.modpackSettings) {
+        await this.loadModpackSettings(this.selectedPack)
+      }
+
+      const hasOptional = this.optionalFilesFor(this.selectedPack).length > 0
+      const prompted = !!this.modpackSettings?.optionalFilesPrompted
+      if (hasOptional && !prompted) {
+        this.optionalModsDialog = {
+          show: true,
+          modpackId: this.selectedPack,
+          mode: 'first-launch',
+        }
+        return
+      }
+
       const { startModpack } = useModpacksCommand()
       try {
         this.launching = true
@@ -268,16 +369,6 @@ export const useLauncherStore = defineStore('launcher', {
     },
 
     async init() {
-      const { displayLauncherSettings } = useSettingsCommand()
-      try {
-        const launcherSettings = await displayLauncherSettings()
-        if (launcherSettings.selectedPack) {
-          this.selectedPack = launcherSettings.selectedPack
-        }
-      } catch (error) {
-        consola.error('Failed to load launcher settings:', error)
-      }
-
       await this.fetchModpacks()
       if (this.selectedPack) {
         await this.loadModpackSettings()

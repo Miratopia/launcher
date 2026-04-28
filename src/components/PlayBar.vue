@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Play, Square } from 'lucide-vue-next'
+import { Play, Square, Eye } from 'lucide-vue-next'
 import { useLauncherStore } from '~/stores/launcherStore'
 import { useDownloadStore } from '~/stores/downloadStore'
 import { useLaunchStore } from '~/stores/launchStore'
@@ -82,10 +82,22 @@ async function handleStop() {
       style="background-color: rgba(255, 255, 255, 0.02)"
     >
       <div class="flex items-center gap-4">
-        <div class="flex-1">
-          <p class="text-white/90 font-medium">
-            {{ store.selectedModpack?.name || 'Aucun modpack' }}
-          </p>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <p class="text-white/90 font-medium truncate">
+              {{ store.selectedModpack?.name || 'Aucun modpack' }}
+            </p>
+            <button
+              v-if="store.selectedPack"
+              type="button"
+              class="shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/40 hover:text-white/80 text-xs transition-all"
+              title="Voir tous les mods"
+              @click="store.openAllModsViewer(store.selectedPack)"
+            >
+              <Eye :size="12" />
+              Mods
+            </button>
+          </div>
           <p class="text-white/30 text-sm">
             {{ statusText }}
           </p>
