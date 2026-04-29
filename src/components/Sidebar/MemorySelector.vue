@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { Cpu, Minus, Plus } from 'lucide-vue-next'
 import { useLauncherStore } from '~/stores/launcherStore'
+import { useAccountsStore } from '~/stores/accountsStore'
 
 const store = useLauncherStore()
+const accountsStore = useAccountsStore()
+
+const isDisabled = computed(() => !store.selectedPack || !accountsStore.activeAccount || store.isGameActive)
 
 async function saveMemory() {
   const current = await store.getSettingsMergeBase(store.selectedPack)
@@ -32,7 +36,7 @@ async function onBlur() {
       <span class="text-xs text-white/40">RAM</span>
       <div class="flex-1 flex items-center justify-end gap-2">
         <button
-          :disabled="store.memory <= store.memoryMin || store.isGameActive"
+          :disabled="store.memory <= store.memoryMin || isDisabled"
           class="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
           @click="onDecrease"
         >
@@ -42,7 +46,7 @@ async function onBlur() {
           <input
             type="text"
             :value="store.memoryInput"
-            :disabled="store.isGameActive"
+            :disabled="isDisabled"
             class="w-full text-center text-sm font-medium text-white bg-transparent border border-transparent hover:border-white/10 focus:border-amber-500/50 rounded-lg py-1 outline-none transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             @input="store.updateMemoryInput(($event.target as HTMLInputElement).value)"
             @blur="onBlur"
@@ -52,7 +56,7 @@ async function onBlur() {
           </span>
         </div>
         <button
-          :disabled="store.memory >= store.memoryMax || store.isGameActive"
+          :disabled="store.memory >= store.memoryMax || isDisabled"
           class="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
           @click="onIncrease"
         >

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Trash2, CheckCircle, Loader2, Globe, Wifi, XCircle } from 'lucide-vue-next'
+import { Trash2, CheckCircle, Loader2, Globe, Wifi, XCircle, Copy } from 'lucide-vue-next'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { useAccountsStore } from '~/stores/accountsStore'
 import { useLauncherStore } from '~/stores/launcherStore'
@@ -12,6 +12,15 @@ const offlineNameInput = ref('')
 const showOfflineForm = ref(false)
 
 const { requestRemove } = useAccountRemoveConfirm()
+
+const codeCopied = ref(false)
+
+async function copyCode() {
+  if (!store.microsoftAuthCode) return
+  await navigator.clipboard.writeText(store.microsoftAuthCode.code)
+  codeCopied.value = true
+  setTimeout(() => { codeCopied.value = false }, 2000)
+}
 
 const activeAccountSubtitle = computed(() => {
   if (!store.activeAccount) return ''
@@ -114,9 +123,25 @@ async function handleSwitch(profileName: string) {
           {{ store.microsoftAuthCode.url }}
         </button>
       </p>
-      <p class="text-lg font-mono font-bold text-blue-400 tracking-widest text-center py-2">
-        {{ store.microsoftAuthCode.code }}
-      </p>
+      <div class="flex items-center justify-center gap-3 py-2">
+        <button
+          class="flex items-center gap-2 px-4 py-2 rounded-lg bg-transparent border border-blue-400/40 hover:border-blue-400/70 text-blue-300 font-mono font-bold tracking-widest text-lg transition-all"
+          @click="copyCode"
+        >
+          <Copy :size="16" class="shrink-0" />
+          {{ store.microsoftAuthCode.code }}
+        </button>
+        <Transition
+          enter-active-class="transition-all duration-200"
+          enter-from-class="opacity-0 translate-x-1"
+          enter-to-class="opacity-100 translate-x-0"
+          leave-active-class="transition-all duration-200"
+          leave-from-class="opacity-100 translate-x-0"
+          leave-to-class="opacity-0 translate-x-1"
+        >
+          <span v-if="codeCopied" class="text-sm text-blue-300/80">Copié !</span>
+        </Transition>
+      </div>
       <button
         class="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 text-white/60 hover:text-red-400 transition-all"
         @click="store.cancelMicrosoftAuth()"

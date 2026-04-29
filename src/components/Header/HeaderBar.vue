@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Settings, Bell } from 'lucide-vue-next'
+import { Settings } from 'lucide-vue-next'
 import { useLauncherStore } from '~/stores/launcherStore'
 
 const store = useLauncherStore()
@@ -17,9 +17,10 @@ const accountMenuRef = ref<{ close: () => void } | null>(null)
       <Settings :size="18" />
     </button>
 
-    <button class="btn-icon-accent">
+    <!-- TODO: decomment this when we implement notification system -->
+    <!-- <button class="btn-icon-accent">
       <Bell :size="18" />
-    </button>
+    </button> -->
 
     <HeaderAccountMenu ref="accountMenuRef" />
   </div>

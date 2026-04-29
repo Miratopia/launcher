@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Play, Square, Eye } from 'lucide-vue-next'
+import { Play, Square, Eye, LogIn } from 'lucide-vue-next'
 import { useLauncherStore } from '~/stores/launcherStore'
+import { useAccountsStore } from '~/stores/accountsStore'
 import { useDownloadStore } from '~/stores/downloadStore'
 import { useLaunchStore } from '~/stores/launchStore'
 import { useModpacksCommand } from '~/composables/useModpacksCommand'
 import { LaunchStatus } from '~/types/lighty-events'
 
 const store = useLauncherStore()
+const accountsStore = useAccountsStore()
 const downloadStore = useDownloadStore()
 const launchStore = useLaunchStore()
 const { stopModpack } = useModpacksCommand()
+
+const hasAccount = computed(() => !!accountsStore.activeAccount)
 
 const downloadProgress = computed(() => {
   if (!store.selectedPack) return null
@@ -61,6 +65,7 @@ const statusText = computed(() => {
   if (isInitializing.value) {
     return initPhase.value?.phase ?? 'Vérification des fichiers...'
   }
+  if (!hasAccount.value) return 'Connectez-vous pour commencer à jouer.'
   return 'Prêt à jouer'
 })
 
@@ -110,6 +115,14 @@ async function handleStop() {
         >
           <Square :size="20" fill="currentColor" />
           Arrêter
+        </button>
+        <button
+          v-else-if="!hasAccount"
+          class="btn-play"
+          @click="store.openSettings('accounts')"
+        >
+          <LogIn :size="20" />
+          Se connecter
         </button>
         <button
           v-else
