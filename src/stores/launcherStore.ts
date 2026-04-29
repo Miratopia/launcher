@@ -67,7 +67,7 @@ export const useLauncherStore = defineStore('launcher', {
     } as OptionalModsDialogState,
 
     announcements: [
-      { date: '08 mai 2026', title: 'Ouverture du serveur TESTOPIA !', type: 'update' },
+      { date: '30 avril 2026', title: 'Ouverture du serveur MiraLabs !', type: 'update' },
     ] as Announcement[],
   }),
 
